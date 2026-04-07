@@ -1,12 +1,31 @@
 const urlParams = new URLSearchParams(window.location.search);
 const difficulty = urlParams.get('difficulty') || 'easy'; // Default to 'easy' if no difficulty is specified
 
+// Load settings from localStorage
+const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
+const timerDuration = settings.timerDuration || 60;
+const visibleWordsCount = settings.visibleWords || 50;
+
 // Word pool variable
 let words = [];
+
+// Punctuation pools by difficulty level
+const punctuationPools = {
+  easy: [".", ",", "'", ";", "-"],
+  medium: [".", ",", "'", ";", "-", "(", ")", "_", "=", "+", ":", "\""],
+  hard: [".", ",", "'", ";", "-", "(", ")", "_", "=", "+", ":", "\"", "<", ">", "{", "}", "[", "]", "/", "\\", "|", "?", "!", "@", "#", "$", "%", "^", "&", "*"]
+};
+
+// Function to get random punctuation based on difficulty
+function getRandomPunctuation() {
+  const pool = punctuationPools[difficulty] || punctuationPools.easy;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+let separators = [];
 let currentWordIndex = 0;
 let typedCharacters = 0;
 let mistakes = 0;
-let timeLeft = 60;
+let timeLeft = timerDuration;
 let interval;
 let timerStarted = false;
 
@@ -27,7 +46,7 @@ const goHomeBtn = document.getElementById('go-home-btn');
 
 // Show the homepage when the Go Home button is clicked
 function goHome() {
-  window.location.href = '/'; // Adjust URL if necessary
+  window.location.href = 'index.html'; // Go to the home page
 }
 
 // Calculate score based on CPM, accuracy, and difficulty
@@ -81,29 +100,157 @@ function generateWords(count) {
   return wordList;
 }
 
+function ensureSeparators(length) {
+  while (separators.length < length) {
+    separators.push(Math.random() < 0.25 ? '\n' : ' ');
+  }
+}
+
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Global variable to store current punctuation for Enter separators
+let currentPunctuation = '';
+
 function updateTextDisplay() {
-  const visibleWordsCount = 50; // Number of words to show initially and during the test
+  const viewMode = localStorage.getItem('viewMode') || 'vertical';
   const visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
 
-  // If there are not enough words, generate additional words
   if (visibleWords.length < visibleWordsCount) {
     words.push(...generateWords(visibleWordsCount - visibleWords.length));
   }
 
-  textDisplay.textContent = visibleWords.join(' ');
+  ensureSeparators(currentWordIndex + visibleWordsCount);
+
+  // Generate punctuation for current word if it's an Enter separator
+  const currentSeparator = separators[currentWordIndex];
+  if (currentSeparator === '\n' && !currentPunctuation) {
+    currentPunctuation = getRandomPunctuation();
+  }
+
+  let displayHtml = '';
+
+  if (viewMode === 'horizontal') {
+    // Horizontal view: display words in paragraph format
+    visibleWords.forEach((word, index) => {
+      const separator = separators[currentWordIndex + index];
+      const prevSeparatorIndex = currentWordIndex + index - 1;
+      const prevSeparator = prevSeparatorIndex >= 0 ? separators[prevSeparatorIndex] : null;
+      let displayWord = word;
+
+      // Capitalize word if it's the first word or the previous separator was punctuation (Enter separator)
+      if (currentWordIndex + index === 0 || prevSeparator === '\n') {
+        displayWord = word.charAt(0).toUpperCase() + word.slice(1);
+      }
+
+      displayHtml += `<span class="word">${escapeHtml(displayWord)}</span>`;
+
+      if (index < visibleWords.length - 1) {
+        if (separator === '\n') {
+          // Show punctuation and Enter symbol for punctuation separators
+          const punctToShow = (index === 0) ? currentPunctuation : getRandomPunctuation();
+          displayHtml += `<span class="punctuation">${punctToShow}↵</span><br>`;
+        } else {
+          displayHtml += `<span class="space"> </span>`;
+        }
+      }
+    });
+  } else {
+    // Vertical view: display words in lines (original behavior)
+    visibleWords.forEach((word, index) => {
+      const separator = separators[currentWordIndex + index];
+      const prevSeparatorIndex = currentWordIndex + index - 1;
+      const prevSeparator = prevSeparatorIndex >= 0 ? separators[prevSeparatorIndex] : null;
+      let displayWord = word;
+
+      // Capitalize word if it's the first word or the previous separator was punctuation (Enter separator)
+      if (currentWordIndex + index === 0 || prevSeparator === '\n') {
+        displayWord = word.charAt(0).toUpperCase() + word.slice(1);
+      }
+
+      displayHtml += `<span class="word">${escapeHtml(displayWord)}</span>`;
+
+      if (index < visibleWords.length - 1) {
+        if (separator === '\n') {
+          // Show punctuation and Enter icon for punctuation separators
+          const punctToShow = (index === 0) ? currentPunctuation : getRandomPunctuation();
+          displayHtml += `<span class="punctuation">${punctToShow}↵ </span>`;
+        } else {
+          displayHtml += `<span class="space"> </span>`;
+        }
+      }
+    });
+  }
+
+  textDisplay.innerHTML = displayHtml;
 }
 
 function startTest() {
-  currentWordIndex = 0; // Start from the first word
-  updateTextDisplay(); // Display the initial 50 words
+  currentWordIndex = 0;
+  currentPunctuation = '';
+  timeLeft = timerDuration; // Reset to the configured duration
+  timerDisplay.textContent = timeLeft; // Update the display
+  ensureSeparators(words.length + visibleWordsCount);
+  updateTextDisplay();
   textInput.addEventListener('input', checkInput);
+  textInput.addEventListener('keydown', handleKeyDown);
 }
 
+function handleKeyDown(e) {
+  const typedText = textInput.value; // Raw input without trim
+  const currentWord = words[currentWordIndex];
+  const nextSeparator = separators[currentWordIndex] || ' ';
+  const prevSeparator = currentWordIndex > 0 ? separators[currentWordIndex - 1] : null;
 
-function updateTextDisplay() {
-  const visibleWordsCount = 50;
-  const visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount); 
-  textDisplay.textContent = visibleWords.join(' '); 
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (nextSeparator === '\n') {
+      // For Enter separators, check if word + punctuation is typed
+      let expectedText = currentWord;
+      if (prevSeparator === '\n') {
+        expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
+      }
+      expectedText += currentPunctuation;
+      if (typedText === expectedText) {
+        moveToNextWord();
+      }
+    }
+  }
+
+  if (e.key === ' ' && nextSeparator === ' ') {
+    e.preventDefault();
+    let expectedText = currentWord;
+    if (prevSeparator === '\n') {
+      expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
+    }
+    if (typedText === expectedText) {
+      moveToNextWord();
+    }
+  }
+}
+
+function moveToNextWord() {
+  currentWordIndex++;
+  textInput.value = '';
+
+  playSound('success');
+
+  if (currentWordIndex + visibleWordsCount >= words.length) {
+    words.push(...generateWords(10));
+    ensureSeparators(words.length + 10);
+  }
+
+  // Reset punctuation for new word
+  currentPunctuation = '';
+
+  updateTextDisplay();
+  updateStats();
 }
 
 function checkInput(e) {
@@ -113,8 +260,10 @@ function checkInput(e) {
     timerStarted = true;
   }
 
-  const typedText = textInput.value.trim(); // Get the typed input
+  const typedText = textInput.value; // Raw input without trim
   const currentWord = words[currentWordIndex]; // Current word to match
+  const nextSeparator = separators[currentWordIndex] || ' ';
+  const prevSeparator = currentWordIndex > 0 ? separators[currentWordIndex - 1] : null;
 
   // Handle backspace and input logic
   if (e.inputType === 'deleteContentBackward') {
@@ -125,24 +274,21 @@ function checkInput(e) {
   typedCharacters++;
 
   // Validate input
-  if (currentWord.startsWith(typedText)) {
+  let expectedText = currentWord;
+  // Capitalize if the previous separator was punctuation (word should be capitalized)
+  if (prevSeparator === '\n') {
+    expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
+  }
+  if (nextSeparator === '\n') {
+    expectedText += currentPunctuation;
+  }
+
+  if (expectedText.startsWith(typedText)) {
     textInput.style.color = "green";
   } else {
     textInput.style.color = "red";
     mistakes++;
-  }
-
-  // Move to the next word when space is pressed and the word is correct
-  if (typedText === currentWord && textInput.value.endsWith(" ")) {
-    currentWordIndex++; // Move to the next word
-    textInput.value = ""; // Clear the input field
-
-    // Add one new word at the end of the array when needed
-    if (currentWordIndex + 50 >= words.length) {
-      words.push(...generateWords(10)); // Add 10 new word to ensure smooth flow
-    }
-
-    updateTextDisplay(); // Update visible words immediately
+    playSound('error');
   }
 
   updateStats();
@@ -150,7 +296,8 @@ function checkInput(e) {
 
 function updateStats() {
   const wordsTyped = currentWordIndex;
-  const minutes = (60 - timeLeft) / 60;
+  const elapsedTime = timerDuration - timeLeft;
+  const minutes = elapsedTime / 60;
   const wpm = Math.round(wordsTyped / minutes || 0);
   const cpm = Math.round(typedCharacters / minutes || 0);
   const accuracy = Math.max(0, Math.round(((typedCharacters - mistakes) / typedCharacters) * 100) || 0);
@@ -172,6 +319,12 @@ function updateTimer() {
 }
 
 function showPopup() {
+  // Check if results popup should be shown
+  const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
+  if (settings.showResults === false) {
+    return; // Don't show popup if disabled
+  }
+
   const wpm = parseInt(wpmDisplay.textContent);
   const cpm = parseInt(cpmDisplay.textContent);
   const accuracy = parseFloat(accuracyDisplay.textContent.replace('%', ''));
@@ -216,6 +369,7 @@ function showPopup() {
     score: score,
     difficulty: difficulty,
     timestamp: new Date().toISOString(),
+    timeTaken: 60 - timeLeft,
     isHighScore: isNewHighScore,
     isPerfectGame: isPerfectGame
   };
@@ -233,8 +387,39 @@ restartBtn.addEventListener('click', () => {
   location.reload(); // Reload the page to restart the test
 });
 
-// Add event listener to the "Go Home" buttons
 goHomeBtn.addEventListener('click', goHome);
+
+// Sound effects
+function playSound(type) {
+  if (!settings.soundEffects) return;
+
+  if (type === 'error' && !settings.errorSounds) return;
+
+  // Create audio context for simple beep sounds
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    if (type === 'error') {
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.2);
+    } else {
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    }
+
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+  } catch (e) {
+    // Fallback: do nothing if Web Audio API is not supported
+  }
+}
 
 // Dark mode toggle
 const darkModeToggle = document.getElementById('dark-mode-toggle');

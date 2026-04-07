@@ -10,13 +10,48 @@
   <div class="container">
     <h1>Welcome to RapidType</h1>
     <p>Select a difficulty level to start the test:</p>
-    <button id="dark-mode-toggle" class="dark-mode-btn">🌙 Dark Mode</button>
     <div class="difficulty-buttons">
       <button class="easy" onclick="startGame('easy')"><span>Easy</span></button>
       <button class="medium" onclick="startGame('medium')"><span>Medium</span></button>
       <button class="hard" onclick="startGame('hard')"><span>Hard</span></button>
     </div>
     <button id="view-stats-btn" class="view-stats-btn">View Stats</button>
+    <button id="settings-btn" class="settings-btn">Settings</button>
+  </div>
+  <div class="settings-modal hidden" id="settings-modal">
+    <div class="settings-content">
+      <h2>Settings</h2>
+      <div class="settings-section">
+        <h3>Test Settings</h3>
+        <div class="setting-item">
+          <label>
+            <input type="radio" name="view-mode" value="vertical" checked> Vertical view
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="radio" name="view-mode" value="horizontal"> Horizontal view
+          </label>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Visuals</h3>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="dark-mode-toggle-setting"> Dark mode
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="show-results-toggle"> Show results popup
+          </label>
+        </div>
+      </div>
+      <div class="settings-buttons">
+        <button id="save-settings-btn" class="save-settings-btn">Save Settings</button>
+        <button id="close-settings-btn">Close</button>
+      </div>
+    </div>
   </div>
   <div class="stats-modal hidden" id="stats-modal">
     <div class="stats-content">
@@ -62,24 +97,6 @@
       window.location.href = `test.html?difficulty=${level}`;
     }
 
-    // Dark mode toggle
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    const body = document.body;
-
-    // Check for saved theme preference or default to light mode
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    if (currentTheme === 'dark') {
-      body.classList.add('dark');
-      darkModeToggle.textContent = '☀️ Light Mode';
-    }
-
-    darkModeToggle.addEventListener('click', () => {
-      body.classList.toggle('dark');
-      const theme = body.classList.contains('dark') ? 'dark' : 'light';
-      localStorage.setItem('theme', theme);
-      darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-    });
-
     // Stats modal
     const viewStatsBtn = document.getElementById('view-stats-btn');
     const statsModal = document.getElementById('stats-modal');
@@ -100,7 +117,7 @@
     let pendingDeleteAction = null;
     let pendingDeleteIndex = null;
     const DELETE_RECORD_TEXT = 'delete record';
-    const DELETE_ALL_TEXT = 'delete all records';
+    const DELETE_ALL_TEXT = 'delete all stats';
 
     function getSelectedDifficulties() {
       return Array.from(difficultyCheckboxes)
@@ -181,7 +198,7 @@
 
     deleteAllStatsBtn.addEventListener('click', () => {
       pendingDeleteAction = 'all';
-      confirmTitle.textContent = 'Delete All Records?';
+      confirmTitle.textContent = 'Delete All Stats?';
       confirmMessage.textContent = `Type "${DELETE_ALL_TEXT}" to confirm:`;
       confirmInput.value = '';
       confirmInput.placeholder = DELETE_ALL_TEXT;
@@ -234,6 +251,84 @@
     closeStatsBtn.addEventListener('click', () => {
       statsModal.classList.add('hidden');
     });
+
+    // Settings modal
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsBtn = document.getElementById('close-settings-btn');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const darkModeToggleSetting = document.getElementById('dark-mode-toggle-setting');
+    const showResultsToggle = document.getElementById('show-results-toggle');
+    const viewModeRadios = document.querySelectorAll('input[name="view-mode"]');
+    const body = document.body;
+
+    // Load saved settings
+    function loadSettings() {
+      const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
+      const viewMode = settings.viewMode || 'vertical';
+      const darkMode = settings.darkMode || false;
+      const showResults = settings.showResults !== false; // Default to true
+
+      // Set radio buttons
+      viewModeRadios.forEach(radio => {
+        radio.checked = radio.value === viewMode;
+      });
+
+      // Set checkboxes
+      darkModeToggleSetting.checked = darkMode;
+      showResultsToggle.checked = showResults;
+
+      // Apply current settings
+      applySettings(settings);
+    }
+
+    // Save settings
+    function saveSettings() {
+      const viewMode = document.querySelector('input[name="view-mode"]:checked').value;
+      const darkMode = darkModeToggleSetting.checked;
+      const showResults = showResultsToggle.checked;
+
+      const settings = {
+        viewMode: viewMode,
+        darkMode: darkMode,
+        showResults: showResults
+      };
+
+      localStorage.setItem('typingTestSettings', JSON.stringify(settings));
+      applySettings(settings);
+    }
+
+    // Apply settings to the page
+    function applySettings(settings) {
+      // Apply dark mode
+      if (settings.darkMode) {
+        body.classList.add('dark');
+      } else {
+        body.classList.remove('dark');
+      }
+
+      // Store view mode for use in test page
+      localStorage.setItem('viewMode', settings.viewMode || 'vertical');
+    }
+
+    // Settings modal event listeners
+    settingsBtn.addEventListener('click', () => {
+      loadSettings();
+      settingsModal.classList.remove('hidden');
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+      settingsModal.classList.add('hidden');
+    });
+
+    saveSettingsBtn.addEventListener('click', () => {
+      saveSettings();
+      settingsModal.classList.add('hidden');
+      alert('Settings saved!');
+    });
+
+    // Load settings on page load
+    loadSettings();
   </script>
 </body>
 </html>

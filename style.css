@@ -159,6 +159,27 @@ body.dark .dark-mode-btn:hover::before {
   width: 100%;
   overflow: hidden;
   white-space: nowrap;
+  overflow-wrap: break-word;
+  line-height: 1.2;
+}
+
+#text-display .enter-icon {
+  color: #007bff;
+  font-weight: bold;
+  margin: 0 4px;
+}
+
+#text-display .word {
+  display: inline-block;
+}
+
+#text-display .punctuation {
+  color: #333;
+  margin: 0 2px;
+}
+
+#text-display .space {
+  display: inline;
 }
 
 #text-input {
