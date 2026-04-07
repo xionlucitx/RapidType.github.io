@@ -10,6 +10,7 @@
   <div class="container">
     <h1>Welcome to RapidType</h1>
     <p>Select a difficulty level to start the test:</p>
+    <button id="dark-mode-toggle" class="dark-mode-btn">🌙 Dark Mode</button>
     <div class="difficulty-buttons">
       <button class="easy" onclick="startGame('easy')"><span>Easy</span></button>
       <button class="medium" onclick="startGame('medium')"><span>Medium</span></button>
@@ -23,6 +24,24 @@
     function startGame(level) {
       window.location.href = `test.html?difficulty=${level}`;
     }
+
+    // Dark mode toggle
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    const body = document.body;
+
+    // Check for saved theme preference or default to light mode
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    if (currentTheme === 'dark') {
+      body.classList.add('dark');
+      darkModeToggle.textContent = '☀️ Light Mode';
+    }
+
+    darkModeToggle.addEventListener('click', () => {
+      body.classList.toggle('dark');
+      const theme = body.classList.contains('dark') ? 'dark' : 'light';
+      localStorage.setItem('theme', theme);
+      darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
   </script>
 </body>
 </html>

@@ -165,5 +165,23 @@ restartBtn.addEventListener('click', () => {
 // Add event listener to the "Go Home" buttons
 goHomeBtn.addEventListener('click', goHome);
 
+// Dark mode toggle
+const darkModeToggle = document.getElementById('dark-mode-toggle');
+const body = document.body;
+
+// Check for saved theme preference or default to light mode
+const currentTheme = localStorage.getItem('theme') || 'light';
+if (currentTheme === 'dark') {
+  body.classList.add('dark');
+  darkModeToggle.textContent = '☀️ Light Mode';
+}
+
+darkModeToggle.addEventListener('click', () => {
+  body.classList.toggle('dark');
+  const theme = body.classList.contains('dark') ? 'dark' : 'light';
+  localStorage.setItem('theme', theme);
+  darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+});
+
 // Start the test when the page loads and the difficulty is loaded
 loadWords();
