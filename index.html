@@ -33,11 +33,23 @@
         <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked> Easy</label>
         <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked> Medium</label>
         <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked> Hard</label>
+        <label><input type="checkbox" id="perfect-game-checkbox" class="filter-checkbox"> Perfect Games</label>
       </div>
       <div id="stats-list"></div>
       <div class="stats-buttons">
         <button id="delete-all-stats-btn" class="delete-all-btn">Delete All Stats</button>
         <button id="close-stats-btn">Close</button>
+      </div>
+    </div>
+  </div>
+  <div class="confirm-modal hidden" id="confirm-modal">
+    <div class="confirm-content">
+      <h3 id="confirm-title">Confirm Deletion</h3>
+      <p id="confirm-message">Type to confirm deletion:</p>
+      <input type="text" id="confirm-input" placeholder="Type here..." />
+      <div class="confirm-buttons">
+        <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
+        <button id="cancel-delete-btn" class="cancel-delete-btn">Cancel</button>
       </div>
     </div>
   </div>
@@ -77,6 +89,18 @@
     const highScoreSpan = document.getElementById('high-score');
     const avgScoreSpan = document.getElementById('avg-score');
     const difficultyCheckboxes = document.querySelectorAll('.difficulty-checkbox');
+    const perfectGameCheckbox = document.getElementById('perfect-game-checkbox');
+    const confirmModal = document.getElementById('confirm-modal');
+    const confirmInput = document.getElementById('confirm-input');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    const confirmTitle = document.getElementById('confirm-title');
+    const confirmMessage = document.getElementById('confirm-message');
+    
+    let pendingDeleteAction = null;
+    let pendingDeleteIndex = null;
+    const DELETE_RECORD_TEXT = 'delete record';
+    const DELETE_ALL_TEXT = 'delete all records';
 
     function getSelectedDifficulties() {
       return Array.from(difficultyCheckboxes)
@@ -87,14 +111,20 @@
     function updateStatsDisplay() {
       const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
       const selectedDifficulties = getSelectedDifficulties();
-      const filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
+      const showPerfectOnly = perfectGameCheckbox.checked;
+      
+      let filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
+      
+      if (showPerfectOnly) {
+        filteredResults = filteredResults.filter(r => r.isPerfectGame === true);
+      }
       
       if (results.length === 0) {
         statsList.innerHTML = '<p>No test results yet.</p>';
         highScoreSpan.textContent = '0';
         avgScoreSpan.textContent = '0';
       } else if (filteredResults.length === 0) {
-        statsList.innerHTML = '<p>No results for selected difficulties.</p>';
+        statsList.innerHTML = '<p>No results for selected filters.</p>';
         highScoreSpan.textContent = '0';
         avgScoreSpan.textContent = '0';
       } else {
@@ -109,11 +139,16 @@
         statsList.innerHTML = filteredResults.map((result, index) => {
           const originalIndex = results.indexOf(result);
           const dateOnly = new Date(result.timestamp).toLocaleDateString();
+          const scores = filteredResults.map(r => r.score || 0);
+          const highScore = Math.max(...scores);
+          const isHighScore = result.score === highScore;
+          const starIcon = isHighScore ? ' ⭐' : '';
+          const isPerfect = result.isPerfectGame ? ' class="perfect-accuracy"' : '';
           return `
             <div class="stat-item">
               <div class="stat-info">
                 <strong>${result.difficulty.toUpperCase()}</strong> - ${dateOnly}<br>
-                WPM: ${result.wpm} | CPM: ${result.cpm} | Accuracy: ${result.accuracy}% | Score: ${result.score || 'N/A'}
+                WPM: ${result.wpm} | CPM: ${result.cpm} | Accuracy: <span${isPerfect}>${result.accuracy}%</span> | Score: ${result.score || 'N/A'}${starIcon}
               </div>
               <button class="delete-stat-btn" onclick="deleteStatResult(${originalIndex})">Delete</button>
             </div>
@@ -123,10 +158,14 @@
     }
 
     window.deleteStatResult = function(index) {
-      const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
-      results.splice(index, 1);
-      localStorage.setItem('typingTestResults', JSON.stringify(results));
-      updateStatsDisplay();
+      pendingDeleteAction = 'single';
+      pendingDeleteIndex = index;
+      confirmTitle.textContent = 'Delete Record?';
+      confirmMessage.textContent = `Type "${DELETE_RECORD_TEXT}" to confirm:`;
+      confirmInput.value = '';
+      confirmInput.placeholder = DELETE_RECORD_TEXT;
+      confirmModal.classList.remove('hidden');
+      confirmInput.focus();
     };
 
     viewStatsBtn.addEventListener('click', () => {
@@ -138,10 +177,57 @@
       checkbox.addEventListener('change', updateStatsDisplay);
     });
 
+    perfectGameCheckbox.addEventListener('change', updateStatsDisplay);
+
     deleteAllStatsBtn.addEventListener('click', () => {
-      if (confirm('Are you sure you want to delete all stats? This cannot be undone.')) {
-        localStorage.setItem('typingTestResults', '[]');
-        updateStatsDisplay();
+      pendingDeleteAction = 'all';
+      confirmTitle.textContent = 'Delete All Records?';
+      confirmMessage.textContent = `Type "${DELETE_ALL_TEXT}" to confirm:`;
+      confirmInput.value = '';
+      confirmInput.placeholder = DELETE_ALL_TEXT;
+      confirmModal.classList.remove('hidden');
+      confirmInput.focus();
+    });
+
+    confirmDeleteBtn.addEventListener('click', () => {
+      const inputValue = confirmInput.value.trim().toLowerCase();
+      
+      if (pendingDeleteAction === 'single') {
+        if (inputValue === DELETE_RECORD_TEXT) {
+          const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+          results.splice(pendingDeleteIndex, 1);
+          localStorage.setItem('typingTestResults', JSON.stringify(results));
+          updateStatsDisplay();
+          confirmModal.classList.add('hidden');
+          pendingDeleteAction = null;
+          pendingDeleteIndex = null;
+        } else {
+          confirmInput.style.borderColor = 'red';
+          setTimeout(() => { confirmInput.style.borderColor = ''; }, 1000);
+        }
+      } else if (pendingDeleteAction === 'all') {
+        if (inputValue === DELETE_ALL_TEXT) {
+          localStorage.setItem('typingTestResults', '[]');
+          updateStatsDisplay();
+          confirmModal.classList.add('hidden');
+          pendingDeleteAction = null;
+        } else {
+          confirmInput.style.borderColor = 'red';
+          setTimeout(() => { confirmInput.style.borderColor = ''; }, 1000);
+        }
+      }
+    });
+
+    cancelDeleteBtn.addEventListener('click', () => {
+      confirmModal.classList.add('hidden');
+      pendingDeleteAction = null;
+      pendingDeleteIndex = null;
+      confirmInput.value = '';
+    });
+
+    confirmInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        confirmDeleteBtn.click();
       }
     });
 

@@ -66,19 +66,62 @@ h1 {
 }
 
 .dark-mode-btn {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 5px;
+  background: transparent;
+  color: black;
+  border: 1px solid black;
+  padding: 5px 15px;
+  border-radius: 25px;
   cursor: pointer;
   position: absolute;
   top: 10px;
   right: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+  outline: none;
+  overflow: hidden;
+  transition: color 0.3s 0.1s ease-out, border-color 0.3s 0.1s ease-out;
+  text-align: center;
+  z-index: 2;
+}
+
+.dark-mode-btn::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: auto;
+  content: "";
+  border-radius: 50%;
+  display: block;
+  width: 20em;
+  height: 20em;
+  left: -5em;
+  text-align: center;
+  transition: box-shadow 0.5s ease-out;
+  z-index: -1;
 }
 
 .dark-mode-btn:hover {
-  background: #555;
+  color: #fff;
+}
+
+.dark-mode-btn:hover::before {
+  box-shadow: inset 0 0 0 10em black;
+}
+
+body.dark .dark-mode-btn {
+  color: #d3d3d3;
+  border: 1px solid #d3d3d3;
+}
+
+body.dark .dark-mode-btn:hover {
+  color: #fff;
+}
+
+body.dark .dark-mode-btn:hover::before {
+  box-shadow: inset 0 0 0 10em #d3d3d3;
 }
 
 .stats {
@@ -164,6 +207,10 @@ h1 {
   font-size: 1.3em;
   font-weight: bold;
   color: #4CAF50;
+}
+
+.hidden {
+  display: none;
 }
 
 .go-home-btn {

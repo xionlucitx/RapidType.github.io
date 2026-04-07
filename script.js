@@ -178,20 +178,46 @@ function showPopup() {
   const score = calculateScore(cpm, accuracy, difficulty);
 
   popupWpm.textContent = wpm;
-  popupCpm.textContent = cpm;
+  popupCpm.textContent = cpm; 
   popupAccuracy.textContent = accuracyDisplay.textContent;
   popupScore.textContent = score;
+
+  // Check if it's a new high score
+  const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+  const previousScores = results.map(r => r.score || 0);
+  const previousHighScore = previousScores.length > 0 ? Math.max(...previousScores) : 0;
+  const isNewHighScore = score > previousHighScore;
+  
+  // Check if it's a perfect game (100% accuracy)
+  const isPerfectGame = accuracy === 100;
+  
+  const newHighscoreMsg = document.getElementById('new-highscore-msg');
+  const perfectGameMsg = document.getElementById('perfect-game-msg');
+  
+  if (isNewHighScore) {
+    newHighscoreMsg.classList.remove('hidden');
+  } else {
+    newHighscoreMsg.classList.add('hidden');
+  }
+  
+  if (isPerfectGame) {
+    perfectGameMsg.classList.remove('hidden');
+  } else {
+    perfectGameMsg.classList.add('hidden');
+  }
+
   popup.classList.remove('hidden');
 
   // Save results to localStorage
-  const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
   const testResult = {
     wpm: wpm,
     cpm: cpm,
     accuracy: accuracy,
     score: score,
     difficulty: difficulty,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    isHighScore: isNewHighScore,
+    isPerfectGame: isPerfectGame
   };
   results.push(testResult);
   // Keep only last 100 results
