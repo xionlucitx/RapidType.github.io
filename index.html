@@ -16,9 +16,34 @@
       <button class="medium" onclick="startGame('medium')"><span>Medium</span></button>
       <button class="hard" onclick="startGame('hard')"><span>Hard</span></button>
     </div>
+    <button id="view-stats-btn" class="view-stats-btn">View Stats</button>
+  </div>
+  <div class="stats-modal hidden" id="stats-modal">
+    <div class="stats-content">
+      <h2>Your Typing Stats</h2>
+      <div id="stats-summary">
+        <div class="summary-item">
+          <strong>High Score:</strong> <span id="high-score">0</span>
+        </div>
+        <div class="summary-item">
+          <strong>Average Score:</strong> <span id="avg-score">0</span>
+        </div>
+      </div>
+      <div class="difficulty-filter">
+        <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked> Easy</label>
+        <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked> Medium</label>
+        <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked> Hard</label>
+      </div>
+      <div id="stats-list"></div>
+      <div class="stats-buttons">
+        <button id="delete-all-stats-btn" class="delete-all-btn">Delete All Stats</button>
+        <button id="close-stats-btn">Close</button>
+      </div>
+    </div>
   </div>
   <div class="footer" id="footertext">
     <p class="rainbow rainbow_text_animated">Made by Rares Racsan</p>
+    <p class="rainbow rainbow_text_animated">Fork by Xionlucitx</p>
   </div>
   <script>
     function startGame(level) {
@@ -41,6 +66,87 @@
       const theme = body.classList.contains('dark') ? 'dark' : 'light';
       localStorage.setItem('theme', theme);
       darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
+
+    // Stats modal
+    const viewStatsBtn = document.getElementById('view-stats-btn');
+    const statsModal = document.getElementById('stats-modal');
+    const statsList = document.getElementById('stats-list');
+    const closeStatsBtn = document.getElementById('close-stats-btn');
+    const deleteAllStatsBtn = document.getElementById('delete-all-stats-btn');
+    const highScoreSpan = document.getElementById('high-score');
+    const avgScoreSpan = document.getElementById('avg-score');
+    const difficultyCheckboxes = document.querySelectorAll('.difficulty-checkbox');
+
+    function getSelectedDifficulties() {
+      return Array.from(difficultyCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    }
+
+    function updateStatsDisplay() {
+      const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+      const selectedDifficulties = getSelectedDifficulties();
+      const filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
+      
+      if (results.length === 0) {
+        statsList.innerHTML = '<p>No test results yet.</p>';
+        highScoreSpan.textContent = '0';
+        avgScoreSpan.textContent = '0';
+      } else if (filteredResults.length === 0) {
+        statsList.innerHTML = '<p>No results for selected difficulties.</p>';
+        highScoreSpan.textContent = '0';
+        avgScoreSpan.textContent = '0';
+      } else {
+        // Calculate high score and average from FILTERED results
+        const scores = filteredResults.map(r => r.score || 0);
+        const highScore = Math.max(...scores);
+        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+        
+        highScoreSpan.textContent = highScore;
+        avgScoreSpan.textContent = avgScore;
+
+        statsList.innerHTML = filteredResults.map((result, index) => {
+          const originalIndex = results.indexOf(result);
+          const dateOnly = new Date(result.timestamp).toLocaleDateString();
+          return `
+            <div class="stat-item">
+              <div class="stat-info">
+                <strong>${result.difficulty.toUpperCase()}</strong> - ${dateOnly}<br>
+                WPM: ${result.wpm} | CPM: ${result.cpm} | Accuracy: ${result.accuracy}% | Score: ${result.score || 'N/A'}
+              </div>
+              <button class="delete-stat-btn" onclick="deleteStatResult(${originalIndex})">Delete</button>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    window.deleteStatResult = function(index) {
+      const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+      results.splice(index, 1);
+      localStorage.setItem('typingTestResults', JSON.stringify(results));
+      updateStatsDisplay();
+    };
+
+    viewStatsBtn.addEventListener('click', () => {
+      updateStatsDisplay();
+      statsModal.classList.remove('hidden');
+    });
+
+    difficultyCheckboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', updateStatsDisplay);
+    });
+
+    deleteAllStatsBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to delete all stats? This cannot be undone.')) {
+        localStorage.setItem('typingTestResults', '[]');
+        updateStatsDisplay();
+      }
+    });
+
+    closeStatsBtn.addEventListener('click', () => {
+      statsModal.classList.add('hidden');
     });
   </script>
 </body>

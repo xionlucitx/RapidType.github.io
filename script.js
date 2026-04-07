@@ -8,6 +8,7 @@ let typedCharacters = 0;
 let mistakes = 0;
 let timeLeft = 60;
 let interval;
+let timerStarted = false;
 
 // DOM Elements
 const textDisplay = document.getElementById('text-display');
@@ -20,12 +21,26 @@ const popup = document.getElementById('popup');
 const popupWpm = document.getElementById('popup-wpm');
 const popupCpm = document.getElementById('popup-cpm');
 const popupAccuracy = document.getElementById('popup-accuracy');
+const popupScore = document.getElementById('popup-score');
 const restartBtn = document.getElementById('restart-btn');
 const goHomeBtn = document.getElementById('go-home-btn');
 
 // Show the homepage when the Go Home button is clicked
 function goHome() {
   window.location.href = '/'; // Adjust URL if necessary
+}
+
+// Calculate score based on CPM, accuracy, and difficulty
+function calculateScore(cpm, accuracy, mode) {
+  const modeTargets = {
+    easy: { cpm: 380, accuracy: 95 },
+    medium: { cpm: 325, accuracy: 95 },
+    hard: { cpm: 270, accuracy: 95 },
+  };
+  
+  const { cpm: targetCpm, accuracy: targetAccuracy } = modeTargets[mode];
+  const rawScore = 100 * (cpm / targetCpm) * (accuracy / targetAccuracy);
+  return Math.max(0, Math.min(150, Math.round(rawScore)));
 }
 
 // Load words from the selected difficulty
@@ -82,7 +97,6 @@ function startTest() {
   currentWordIndex = 0; // Start from the first word
   updateTextDisplay(); // Display the initial 50 words
   textInput.addEventListener('input', checkInput);
-  interval = setInterval(updateTimer, 1000);
 }
 
 
@@ -93,6 +107,12 @@ function updateTextDisplay() {
 }
 
 function checkInput(e) {
+  // Start timer on first input (except backspace)
+  if (!timerStarted && e.inputType !== 'deleteContentBackward') {
+    interval = setInterval(updateTimer, 1000);
+    timerStarted = true;
+  }
+
   const typedText = textInput.value.trim(); // Get the typed input
   const currentWord = words[currentWordIndex]; // Current word to match
 
@@ -152,13 +172,38 @@ function updateTimer() {
 }
 
 function showPopup() {
-  popupWpm.textContent = wpmDisplay.textContent;
-  popupCpm.textContent = cpmDisplay.textContent;
+  const wpm = parseInt(wpmDisplay.textContent);
+  const cpm = parseInt(cpmDisplay.textContent);
+  const accuracy = parseFloat(accuracyDisplay.textContent.replace('%', ''));
+  const score = calculateScore(cpm, accuracy, difficulty);
+
+  popupWpm.textContent = wpm;
+  popupCpm.textContent = cpm;
   popupAccuracy.textContent = accuracyDisplay.textContent;
+  popupScore.textContent = score;
   popup.classList.remove('hidden');
+
+  // Save results to localStorage
+  const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+  const testResult = {
+    wpm: wpm,
+    cpm: cpm,
+    accuracy: accuracy,
+    score: score,
+    difficulty: difficulty,
+    timestamp: new Date().toISOString()
+  };
+  results.push(testResult);
+  // Keep only last 100 results
+  if (results.length > 100) {
+    results.shift();
+  }
+  localStorage.setItem('typingTestResults', JSON.stringify(results));
 }
 
 restartBtn.addEventListener('click', () => {
+  timerStarted = false;
+  if (interval) clearInterval(interval);
   location.reload(); // Reload the page to restart the test
 });
 
