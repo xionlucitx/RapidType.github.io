@@ -202,36 +202,42 @@ function startTest() {
   textInput.addEventListener('keydown', handleKeyDown);
 }
 
-function handleKeyDown(e) {
-  const typedText = textInput.value; // Raw input without trim
-  const currentWord = words[currentWordIndex];
-  const nextSeparator = separators[currentWordIndex] || ' ';
-  const prevSeparator = currentWordIndex > 0 ? separators[currentWordIndex - 1] : null;
+function getExpectedWord(word, index) {
+  if (index === 0) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+  return word;
+}
 
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    if (nextSeparator === '\n') {
-      // For Enter separators, check if word + punctuation is typed
-      let expectedText = currentWord;
-      if (prevSeparator === '\n') {
-        expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
-      }
-      expectedText += currentPunctuation;
-      if (typedText === expectedText) {
-        moveToNextWord();
-      }
-    }
+function checkInput() {
+  const typedText = textInput.value;
+  const currentWord = words[currentWordIndex];
+  const expectedText = getExpectedWord(currentWord, currentWordIndex);
+
+  if (expectedText.startsWith(typedText)) {
+    textInput.style.color = "green";
+  } else {
+    textInput.style.color = "red";
+    mistakes++;
+    playSound("error");
   }
 
-  if (e.key === ' ' && nextSeparator === ' ') {
-    e.preventDefault();
-    let expectedText = currentWord;
-    if (prevSeparator === '\n') {
-      expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
-    }
-    if (typedText === expectedText) {
-      moveToNextWord();
-    }
+  updateStats();
+}
+
+function handleKeyDown(e) {
+  if (e.key !== " " && e.key !== "Enter") return;
+
+  e.preventDefault();
+
+  const typedText = textInput.value.trim();
+  const currentWord = words[currentWordIndex];
+  const expectedText = getExpectedWord(currentWord, currentWordIndex);
+
+  if (typedText === expectedText) {
+    moveToNextWord();
+  } else {
+    markIncorrectInput(expectedText);
   }
 }
 
