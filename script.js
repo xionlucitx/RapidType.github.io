@@ -4,7 +4,7 @@ const difficulty = urlParams.get('difficulty') || 'easy';
 // Load settings from localStorage
 const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
 const timerDuration = settings.timerDuration || 60;
-const visibleWordsCount = settings.visibleWords || 50;
+const visibleWordsCount = Math.min(settings.visibleWords || 10, 12);
 
 // Word pool variable
 let words = [];
@@ -30,6 +30,7 @@ let mistakes = 0;
 let timeLeft = timerDuration;
 let interval = null;
 let timerStarted = false;
+let currentWordIncorrect = false;
 
 // DOM Elements
 const textDisplay = document.getElementById('text-display');
@@ -74,7 +75,12 @@ function calculateScore(cpm, accuracy, mode) {
 // Load words from the selected difficulty
 function loadWords() {
   fetch(`${difficulty}.json`)
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to load ${difficulty}.json`);
+      }
+      return response.json();
+    })
     .then(data => {
       words = shuffleArray([...data.words]);
 
@@ -85,7 +91,8 @@ function loadWords() {
       startTest();
     })
     .catch(error => {
-      console.error("Error loading word file:", error);
+      console.error('Error loading word file:', error);
+      textDisplay.innerHTML = `<span style="color:red;">Failed to load word list: ${difficulty}.json</span>`;
     });
 }
 
@@ -142,46 +149,48 @@ function getExpectedWord(word, index) {
   return expectedWord;
 }
 
+function getWordsToShow() {
+  const viewMode = localStorage.getItem('viewMode') || 'vertical';
+  return viewMode === 'vertical' ? 22 : visibleWordsCount;
+}
+
+function updateInputHint() {
+  const expectedSeparator = separators[currentWordIndex] || ' ';
+  textInput.placeholder =
+    expectedSeparator === '\n'
+      ? 'Type the word, then press Enter'
+      : 'Type the word, then press Space';
+}
+
 function updateTextDisplay() {
   const viewMode = localStorage.getItem('viewMode') || 'vertical';
-  let visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
+  const wordsToShow = getWordsToShow();
 
-  if (visibleWords.length < visibleWordsCount) {
-    words.push(...generateWords(visibleWordsCount - visibleWords.length));
-    visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
+  let visibleWords = words.slice(currentWordIndex, currentWordIndex + wordsToShow);
+
+  if (visibleWords.length < wordsToShow) {
+    words.push(...generateWords(wordsToShow - visibleWords.length));
+    visibleWords = words.slice(currentWordIndex, currentWordIndex + wordsToShow);
   }
 
-  ensureSeparators(currentWordIndex + visibleWordsCount);
+  ensureSeparators(currentWordIndex + wordsToShow);
 
   let displayHtml = '';
 
-  if (viewMode === 'horizontal') {
-    visibleWords.forEach((word, index) => {
-      const wordIndex = currentWordIndex + index;
-      const expectedWord = getExpectedWord(word, wordIndex);
-      const isCurrent = index === 0 ? ' current-word' : '';
+  visibleWords.forEach((word, index) => {
+    const wordIndex = currentWordIndex + index;
+    const expectedWord = getExpectedWord(word, wordIndex);
+    const isCurrent = index === 0 ? ' current-word' : '';
 
-      displayHtml += `<span class="word${isCurrent}">${escapeHtml(expectedWord)}</span>`;
+    displayHtml += `<span class="word${isCurrent}">${escapeHtml(expectedWord)}</span>`;
 
-      if (index < visibleWords.length - 1) {
-        const separator = separators[wordIndex];
-
-        if (separator === '\n') {
-          displayHtml += `<span class="enter-separator"> ↵ </span>`;
-        } else {
-          displayHtml += `<span class="space"> </span>`;
-        }
-      }
-    });
-  } else {
-    visibleWords.forEach((word, index) => {
-      const wordIndex = currentWordIndex + index;
-      const expectedWord = getExpectedWord(word, wordIndex);
-      const isCurrent = index === 0 ? ' current-word' : '';
-
-      displayHtml += `<div class="word${isCurrent}">${escapeHtml(expectedWord)}</div>`;
-    });
-  }
+    if (index < visibleWords.length - 1) {
+      const separator = separators[wordIndex];
+      displayHtml += separator === '\n'
+        ? `<span class="enter-separator"> ↵ </span>`
+        : `<span class="space"> </span>`;
+    }
+  });
 
   textDisplay.innerHTML = displayHtml;
 }
@@ -192,6 +201,7 @@ function startTest() {
   mistakes = 0;
   timeLeft = timerDuration;
   timerStarted = false;
+  currentWordIncorrect = false;
   separators = [];
 
   if (interval) {
@@ -206,9 +216,10 @@ function startTest() {
   textInput.style.color = '';
   timerDisplay.textContent = timeLeft;
 
-  ensureSeparators(words.length + visibleWordsCount);
+  ensureSeparators(words.length + getWordsToShow());
   updateTextDisplay();
   updateStats();
+  updateInputHint();
 
   textInput.removeEventListener('input', checkInput);
   textInput.removeEventListener('keydown', handleKeyDown);
@@ -228,21 +239,26 @@ function checkInput(e) {
   const expectedText = getExpectedWord(words[currentWordIndex], currentWordIndex);
 
   if (e.inputType === 'deleteContentBackward') {
-    textInput.style.color = expectedText.startsWith(typedText) ? 'green' : 'red';
+    textInput.style.color =
+      typedText === '' || expectedText.startsWith(typedText)
+        ? 'green'
+        : 'red';
+
     updateStats();
     return;
   }
 
   typedCharacters++;
 
-  if (
-    expectedText.startsWith(typedText) ||
-    expectedText.toLowerCase().startsWith(typedText.toLowerCase())
-  ) {
+  if (expectedText.startsWith(typedText)) {
     textInput.style.color = 'green';
   } else {
     textInput.style.color = 'red';
-    mistakes++;
+
+    if (!currentWordIncorrect) {
+      mistakes++;
+      currentWordIncorrect = true;
+    }
   }
 
   updateStats();
@@ -256,45 +272,66 @@ function normalizeWordForCompare(text) {
 function handleKeyDown(e) {
   if (e.key !== ' ' && e.key !== 'Enter') return;
 
+  const expectedSeparator = separators[currentWordIndex] || ' ';
+  const shouldUseEnter = expectedSeparator === '\n';
+
+  if (shouldUseEnter && e.key !== 'Enter') {
+    e.preventDefault();
+    markIncorrectInput();
+    return;
+  }
+
+  if (!shouldUseEnter && e.key !== ' ') {
+    e.preventDefault();
+    markIncorrectInput();
+    return;
+  }
+
   e.preventDefault();
 
   const rawTypedText = textInput.value;
   const expectedText = getExpectedWord(words[currentWordIndex], currentWordIndex);
 
-  const typedText = normalizeWordForCompare(rawTypedText);
-  const expectedNormalized = normalizeWordForCompare(expectedText);
-
-  if (typedText === expectedNormalized) {
+  // THIS IS THE IMPORTANT FIX
+  if (expectedText.startsWith(rawTypedText) && rawTypedText.length === expectedText.length) {
     moveToNextWord();
   } else {
-    markIncorrectInput(expectedText);
+    markIncorrectInput();
   }
 }
 
 
 function moveToNextWord() {
   currentWordIndex++;
+  currentWordIncorrect = false;
 
   textInput.value = '';
   textInput.style.color = '';
 
-  playSuccessSound();
 
-  if (currentWordIndex + visibleWordsCount >= words.length) {
+  const wordsToShow = getWordsToShow();
+
+  if (currentWordIndex + wordsToShow >= words.length) {
     words.push(...generateWords(10));
     ensureSeparators(words.length + 10);
   }
 
   updateTextDisplay();
   updateStats();
+  updateInputHint();
 }
 
-function markIncorrectInput(expectedText) {
+function markIncorrectInput() {
   textInput.style.color = 'red';
 
   if (textInput.value.trim() !== '') {
     mistakes++;
   }
+
+  textInput.classList.add('input-error');
+  setTimeout(() => {
+    textInput.classList.remove('input-error');
+  }, 120);
 
   updateStats();
 }

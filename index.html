@@ -1,61 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RapidType - Typing Speed Test</title>
-  <link rel="stylesheet" href="index_style.css">
+  <link rel="stylesheet" href="index_style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Welcome to RapidType</h1>
-    <p>Select a difficulty level to start the test:</p>
-    <div class="difficulty-buttons">
-      <button class="easy" onclick="startGame('easy')"><span>Easy</span></button>
-      <button class="medium" onclick="startGame('medium')"><span>Medium</span></button>
-      <button class="hard" onclick="startGame('hard')"><span>Hard</span></button>
+  <div class="page-shell">
+    <div class="container">
+      <h1>Welcome to RapidType</h1>
+      <p class="subtitle">Select a difficulty level to start the test:</p>
+
+      <div class="difficulty-buttons">
+        <button class="easy" onclick="startGame('easy')"><span>Easy</span></button>
+        <button class="medium" onclick="startGame('medium')"><span>Medium</span></button>
+        <button class="hard" onclick="startGame('hard')"><span>Hard</span></button>
+      </div>
+
+      <div class="main-actions">
+        <button id="view-stats-btn" class="view-stats-btn">View Stats</button>
+        <button id="settings-btn" class="settings-btn">Settings</button>
+      </div>
     </div>
-    <button id="view-stats-btn" class="view-stats-btn">View Stats</button>
-    <button id="settings-btn" class="settings-btn">Settings</button>
   </div>
+
   <div class="settings-modal hidden" id="settings-modal">
     <div class="settings-content">
       <h2>Settings</h2>
+
       <div class="settings-section">
         <h3>Test Settings</h3>
         <div class="setting-item">
           <label>
-            <input type="radio" name="view-mode" value="vertical" checked> Vertical view
+            <input type="radio" name="view-mode" value="vertical" checked />
+            Vertical view
           </label>
         </div>
         <div class="setting-item">
           <label>
-            <input type="radio" name="view-mode" value="horizontal"> Horizontal view
+            <input type="radio" name="view-mode" value="horizontal" />
+            Horizontal view
           </label>
         </div>
       </div>
+
       <div class="settings-section">
         <h3>Visuals</h3>
         <div class="setting-item">
           <label>
-            <input type="checkbox" id="dark-mode-toggle-setting"> Dark mode
+            <input type="checkbox" id="dark-mode-toggle-setting" />
+            Dark mode
           </label>
         </div>
         <div class="setting-item">
           <label>
-            <input type="checkbox" id="show-results-toggle"> Show results popup
+            <input type="checkbox" id="show-results-toggle" />
+            Show results popup
           </label>
         </div>
       </div>
+
       <div class="settings-buttons">
         <button id="save-settings-btn" class="save-settings-btn">Save Settings</button>
         <button id="close-settings-btn">Close</button>
       </div>
     </div>
   </div>
+
   <div class="stats-modal hidden" id="stats-modal">
     <div class="stats-content">
       <h2>Your Typing Stats</h2>
+
       <div id="stats-summary">
         <div class="summary-item">
           <strong>High Score:</strong> <span id="high-score">0</span>
@@ -64,19 +80,23 @@
           <strong>Average Score:</strong> <span id="avg-score">0</span>
         </div>
       </div>
+
       <div class="difficulty-filter">
-        <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked> Easy</label>
-        <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked> Medium</label>
-        <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked> Hard</label>
-        <label><input type="checkbox" id="perfect-game-checkbox" class="filter-checkbox"> Perfect Games</label>
+        <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked /> Easy</label>
+        <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked /> Medium</label>
+        <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked /> Hard</label>
+        <label><input type="checkbox" id="perfect-game-checkbox" class="filter-checkbox" /> Perfect Games</label>
       </div>
+
       <div id="stats-list"></div>
+
       <div class="stats-buttons">
         <button id="delete-all-stats-btn" class="delete-all-btn">Delete All Stats</button>
         <button id="close-stats-btn">Close</button>
       </div>
     </div>
   </div>
+
   <div class="confirm-modal hidden" id="confirm-modal">
     <div class="confirm-content">
       <h3 id="confirm-title">Confirm Deletion</h3>
@@ -88,10 +108,12 @@
       </div>
     </div>
   </div>
+
   <div class="footer" id="footertext">
     <p class="rainbow rainbow_text_animated">Made by Rares Racsan</p>
     <p class="rainbow rainbow_text_animated">Fork by Xionlucitx</p>
   </div>
+
   <script>
     function startGame(level) {
       window.location.href = `test.html?difficulty=${level}`;
@@ -113,7 +135,7 @@
     const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
     const confirmTitle = document.getElementById('confirm-title');
     const confirmMessage = document.getElementById('confirm-message');
-    
+
     let pendingDeleteAction = null;
     let pendingDeleteIndex = null;
     const DELETE_RECORD_TEXT = 'delete record';
@@ -129,13 +151,13 @@
       const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
       const selectedDifficulties = getSelectedDifficulties();
       const showPerfectOnly = perfectGameCheckbox.checked;
-      
+
       let filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
-      
+
       if (showPerfectOnly) {
         filteredResults = filteredResults.filter(r => r.isPerfectGame === true);
       }
-      
+
       if (results.length === 0) {
         statsList.innerHTML = '<p>No test results yet.</p>';
         highScoreSpan.textContent = '0';
@@ -145,22 +167,20 @@
         highScoreSpan.textContent = '0';
         avgScoreSpan.textContent = '0';
       } else {
-        // Calculate high score and average from FILTERED results
         const scores = filteredResults.map(r => r.score || 0);
         const highScore = Math.max(...scores);
         const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-        
+
         highScoreSpan.textContent = highScore;
         avgScoreSpan.textContent = avgScore;
 
-        statsList.innerHTML = filteredResults.map((result, index) => {
+        statsList.innerHTML = filteredResults.map((result) => {
           const originalIndex = results.indexOf(result);
           const dateOnly = new Date(result.timestamp).toLocaleDateString();
-          const scores = filteredResults.map(r => r.score || 0);
-          const highScore = Math.max(...scores);
           const isHighScore = result.score === highScore;
           const starIcon = isHighScore ? ' ⭐' : '';
           const isPerfect = result.isPerfectGame ? ' class="perfect-accuracy"' : '';
+
           return `
             <div class="stat-item">
               <div class="stat-info">
@@ -208,7 +228,7 @@
 
     confirmDeleteBtn.addEventListener('click', () => {
       const inputValue = confirmInput.value.trim().toLowerCase();
-      
+
       if (pendingDeleteAction === 'single') {
         if (inputValue === DELETE_RECORD_TEXT) {
           const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
@@ -262,56 +282,47 @@
     const viewModeRadios = document.querySelectorAll('input[name="view-mode"]');
     const body = document.body;
 
-    // Load saved settings
     function loadSettings() {
       const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
       const viewMode = settings.viewMode || 'vertical';
       const darkMode = settings.darkMode || false;
-      const showResults = settings.showResults !== false; // Default to true
+      const showResults = settings.showResults !== false;
 
-      // Set radio buttons
       viewModeRadios.forEach(radio => {
         radio.checked = radio.value === viewMode;
       });
 
-      // Set checkboxes
       darkModeToggleSetting.checked = darkMode;
       showResultsToggle.checked = showResults;
 
-      // Apply current settings
       applySettings(settings);
     }
 
-    // Save settings
     function saveSettings() {
       const viewMode = document.querySelector('input[name="view-mode"]:checked').value;
       const darkMode = darkModeToggleSetting.checked;
       const showResults = showResultsToggle.checked;
 
       const settings = {
-        viewMode: viewMode,
-        darkMode: darkMode,
-        showResults: showResults
+        viewMode,
+        darkMode,
+        showResults
       };
 
       localStorage.setItem('typingTestSettings', JSON.stringify(settings));
       applySettings(settings);
     }
 
-    // Apply settings to the page
     function applySettings(settings) {
-      // Apply dark mode
       if (settings.darkMode) {
         body.classList.add('dark');
       } else {
         body.classList.remove('dark');
       }
 
-      // Store view mode for use in test page
       localStorage.setItem('viewMode', settings.viewMode || 'vertical');
     }
 
-    // Settings modal event listeners
     settingsBtn.addEventListener('click', () => {
       loadSettings();
       settingsModal.classList.remove('hidden');
@@ -327,7 +338,6 @@
       alert('Settings saved!');
     });
 
-    // Load settings on page load
     loadSettings();
   </script>
 </body>

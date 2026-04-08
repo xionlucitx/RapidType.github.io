@@ -1,30 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RapidType - Typing Test</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="test-container">
-    <h1>RapidType</h1>
-    <button id="dark-mode-toggle" class="dark-mode-btn">🌙 Dark Mode</button>
-    <div class="stats">
-      <p>WPM: <span id="wpm">0</span></p>
-      <p>CPM: <span id="cpm">0</span></p>
-      <p>Accuracy: <span id="accuracy">100%</span></p>
-      <p>Time Left: <span id="timer">60</span>s</p>
+  <div class="page-shell">
+    <div class="test-container">
+      <div class="top-bar">
+        <h1>RapidType</h1>
+        <button id="dark-mode-toggle" class="dark-mode-btn">🌙 Dark Mode</button>
+      </div>
+
+      <div class="stats">
+        <p>WPM: <span id="wpm">0</span></p>
+        <p>CPM: <span id="cpm">0</span></p>
+        <p>Accuracy: <span id="accuracy">100%</span></p>
+        <p>Time Left: <span id="timer">60</span>s</p>
+      </div>
+
+      <div class="typing-area">
+        <div id="text-display"></div>
+        <input
+          class="input"
+          type="text"
+          id="text-input"
+          placeholder="Start typing..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="bottom-actions">
+        <button id="go-home-btn" class="go-home-btn">
+          <svg class="svgIcon" viewBox="0 0 384 512" aria-hidden="true">
+            <path
+              d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"
+            ></path>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="typing-area">
-      <div id="text-display"></div>
-      <input class="input" type="text" id="text-input" placeholder="Start typing..." />
-    </div>
-    <button id="go-home-btn" class="go-home-btn"><svg class="svgIcon" viewBox="0 0 384 512">
-      <path
-        d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"
-      ></path>
-    </svg></button>
   </div>
 
   <div class="popup hidden" id="popup">
@@ -36,8 +56,15 @@
       <li>Accuracy: <span id="popup-accuracy">100%</span></li>
       <li>Score: <span id="popup-score">0</span> Points</li>
     </ul>
-    <div id="new-highscore-msg" class="hidden" style="color: gold; font-size: 1.2em; font-weight: bold; margin-top: 10px; padding: 10px; background: rgba(255, 215, 0, 0.1); border-radius: 5px;">🌟 NEW HIGH SCORE! 🌟</div>
-    <div id="perfect-game-msg" class="hidden" style="color: #00d4ff; font-size: 1.2em; font-weight: bold; margin-top: 10px; padding: 10px; background: rgba(0, 212, 255, 0.1); border-radius: 5px; text-shadow: 0 0 10px rgba(0, 212, 255, 0.6);">✨ PERFECT GAME! ✨</div>
+
+    <div id="new-highscore-msg" class="hidden badge highscore-badge">
+      🌟 NEW HIGH SCORE! 🌟
+    </div>
+
+    <div id="perfect-game-msg" class="hidden badge perfect-badge">
+      ✨ PERFECT GAME! ✨
+    </div>
+
     <button id="restart-btn">Restart</button>
   </div>
 
