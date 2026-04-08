@@ -1,5 +1,5 @@
 const urlParams = new URLSearchParams(window.location.search);
-const difficulty = urlParams.get('difficulty') || 'easy'; // Default to 'easy' if no difficulty is specified
+const difficulty = urlParams.get('difficulty') || 'easy';
 
 // Load settings from localStorage
 const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
@@ -9,24 +9,26 @@ const visibleWordsCount = settings.visibleWords || 50;
 // Word pool variable
 let words = [];
 
-// Punctuation pools by difficulty level
+const punctuationMap = {};
+
 const punctuationPools = {
-  easy: [".", ",", "'", ";", "-"],
-  medium: [".", ",", "'", ";", "-", "(", ")", "_", "=", "+", ":", "\""],
+  easy: [".", ",", "'"],
+  medium: [".", ",", "'", ";", "-", "(", ")", ":"],
   hard: [".", ",", "'", ";", "-", "(", ")", "_", "=", "+", ":", "\"", "<", ">", "{", "}", "[", "]", "/", "\\", "|", "?", "!", "@", "#", "$", "%", "^", "&", "*"]
 };
 
-// Function to get random punctuation based on difficulty
 function getRandomPunctuation() {
-  const pool = punctuationPools[difficulty] || punctuationPools.easy;
+  const savedDifficulty = localStorage.getItem('difficulty') || difficulty || 'easy';
+  const pool = punctuationPools[savedDifficulty] || punctuationPools.easy;
   return pool[Math.floor(Math.random() * pool.length)];
 }
+
 let separators = [];
 let currentWordIndex = 0;
 let typedCharacters = 0;
 let mistakes = 0;
 let timeLeft = timerDuration;
-let interval;
+let interval = null;
 let timerStarted = false;
 
 // DOM Elements
@@ -46,7 +48,14 @@ const goHomeBtn = document.getElementById('go-home-btn');
 
 // Show the homepage when the Go Home button is clicked
 function goHome() {
-  window.location.href = 'index.html'; // Go to the home page
+  window.location.href = 'index.html';
+}
+
+// Safe sound wrapper
+function playSuccessSound() {
+  if (typeof playSound === 'function') {
+    playSound('success');
+  }
 }
 
 // Calculate score based on CPM, accuracy, and difficulty
@@ -56,8 +65,8 @@ function calculateScore(cpm, accuracy, mode) {
     medium: { cpm: 325, accuracy: 95 },
     hard: { cpm: 270, accuracy: 95 },
   };
-  
-  const { cpm: targetCpm, accuracy: targetAccuracy } = modeTargets[mode];
+
+  const { cpm: targetCpm, accuracy: targetAccuracy } = modeTargets[mode] || modeTargets.easy;
   const rawScore = 100 * (cpm / targetCpm) * (accuracy / targetAccuracy);
   return Math.max(0, Math.min(150, Math.round(rawScore)));
 }
@@ -67,9 +76,8 @@ function loadWords() {
   fetch(`${difficulty}.json`)
     .then(response => response.json())
     .then(data => {
-      words = shuffleArray(data.words); // Shuffle the words to make the test more interesting
+      words = shuffleArray([...data.words]);
 
-      // Generate more words if the initial pool is smaller than required
       if (words.length < 50) {
         words.push(...generateWords(50 - words.length));
       }
@@ -85,7 +93,7 @@ function loadWords() {
 function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+    [array[i], array[j]] = [array[j], array[i]];
   }
   return array;
 }
@@ -93,6 +101,8 @@ function shuffleArray(array) {
 // Generate random words dynamically
 function generateWords(count) {
   const wordList = [];
+  if (words.length === 0) return wordList;
+
   for (let i = 0; i < count; i++) {
     const randomIndex = Math.floor(Math.random() * words.length);
     wordList.push(words[randomIndex]);
@@ -115,76 +125,61 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;');
 }
 
-// Global variable to store current punctuation for Enter separators
-let currentPunctuation = '';
+function getExpectedWord(word, index) {
+  let expectedWord = word;
+
+  if (index === 0 || separators[index - 1] === '\n') {
+    expectedWord = word.charAt(0).toUpperCase() + word.slice(1);
+  }
+
+  if (separators[index] === '\n') {
+    if (!punctuationMap[index]) {
+      punctuationMap[index] = getRandomPunctuation();
+    }
+    expectedWord += punctuationMap[index];
+  }
+
+  return expectedWord;
+}
 
 function updateTextDisplay() {
   const viewMode = localStorage.getItem('viewMode') || 'vertical';
-  const visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
+  let visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
 
   if (visibleWords.length < visibleWordsCount) {
     words.push(...generateWords(visibleWordsCount - visibleWords.length));
+    visibleWords = words.slice(currentWordIndex, currentWordIndex + visibleWordsCount);
   }
 
   ensureSeparators(currentWordIndex + visibleWordsCount);
 
-  // Generate punctuation for current word if it's an Enter separator
-  const currentSeparator = separators[currentWordIndex];
-  if (currentSeparator === '\n' && !currentPunctuation) {
-    currentPunctuation = getRandomPunctuation();
-  }
-
   let displayHtml = '';
 
   if (viewMode === 'horizontal') {
-    // Horizontal view: display words in paragraph format
     visibleWords.forEach((word, index) => {
-      const separator = separators[currentWordIndex + index];
-      const prevSeparatorIndex = currentWordIndex + index - 1;
-      const prevSeparator = prevSeparatorIndex >= 0 ? separators[prevSeparatorIndex] : null;
-      let displayWord = word;
+      const wordIndex = currentWordIndex + index;
+      const expectedWord = getExpectedWord(word, wordIndex);
+      const isCurrent = index === 0 ? ' current-word' : '';
 
-      // Capitalize word if it's the first word or the previous separator was punctuation (Enter separator)
-      if (currentWordIndex + index === 0 || prevSeparator === '\n') {
-        displayWord = word.charAt(0).toUpperCase() + word.slice(1);
-      }
-
-      displayHtml += `<span class="word">${escapeHtml(displayWord)}</span>`;
+      displayHtml += `<span class="word${isCurrent}">${escapeHtml(expectedWord)}</span>`;
 
       if (index < visibleWords.length - 1) {
+        const separator = separators[wordIndex];
+
         if (separator === '\n') {
-          // Show punctuation and Enter symbol for punctuation separators
-          const punctToShow = (index === 0) ? currentPunctuation : getRandomPunctuation();
-          displayHtml += `<span class="punctuation">${punctToShow}↵</span><br>`;
+          displayHtml += `<span class="enter-separator"> ↵ </span>`;
         } else {
           displayHtml += `<span class="space"> </span>`;
         }
       }
     });
   } else {
-    // Vertical view: display words in lines (original behavior)
     visibleWords.forEach((word, index) => {
-      const separator = separators[currentWordIndex + index];
-      const prevSeparatorIndex = currentWordIndex + index - 1;
-      const prevSeparator = prevSeparatorIndex >= 0 ? separators[prevSeparatorIndex] : null;
-      let displayWord = word;
+      const wordIndex = currentWordIndex + index;
+      const expectedWord = getExpectedWord(word, wordIndex);
+      const isCurrent = index === 0 ? ' current-word' : '';
 
-      // Capitalize word if it's the first word or the previous separator was punctuation (Enter separator)
-      if (currentWordIndex + index === 0 || prevSeparator === '\n') {
-        displayWord = word.charAt(0).toUpperCase() + word.slice(1);
-      }
-
-      displayHtml += `<span class="word">${escapeHtml(displayWord)}</span>`;
-
-      if (index < visibleWords.length - 1) {
-        if (separator === '\n') {
-          // Show punctuation and Enter icon for punctuation separators
-          const punctToShow = (index === 0) ? currentPunctuation : getRandomPunctuation();
-          displayHtml += `<span class="punctuation">${punctToShow}↵ </span>`;
-        } else {
-          displayHtml += `<span class="space"> </span>`;
-        }
-      }
+      displayHtml += `<div class="word${isCurrent}">${escapeHtml(expectedWord)}</div>`;
     });
   }
 
@@ -193,108 +188,112 @@ function updateTextDisplay() {
 
 function startTest() {
   currentWordIndex = 0;
-  currentPunctuation = '';
-  timeLeft = timerDuration; // Reset to the configured duration
-  timerDisplay.textContent = timeLeft; // Update the display
+  typedCharacters = 0;
+  mistakes = 0;
+  timeLeft = timerDuration;
+  timerStarted = false;
+  separators = [];
+
+  if (interval) {
+    clearInterval(interval);
+    interval = null;
+  }
+
+  Object.keys(punctuationMap).forEach(key => delete punctuationMap[key]);
+
+  textInput.disabled = false;
+  textInput.value = '';
+  textInput.style.color = '';
+  timerDisplay.textContent = timeLeft;
+
   ensureSeparators(words.length + visibleWordsCount);
   updateTextDisplay();
+  updateStats();
+
+  textInput.removeEventListener('input', checkInput);
+  textInput.removeEventListener('keydown', handleKeyDown);
   textInput.addEventListener('input', checkInput);
   textInput.addEventListener('keydown', handleKeyDown);
+
+  textInput.focus();
 }
 
-function getExpectedWord(word, index) {
-  if (index === 0) {
-    return word.charAt(0).toUpperCase() + word.slice(1);
+function checkInput(e) {
+  if (!timerStarted && e.inputType !== 'deleteContentBackward') {
+    interval = setInterval(updateTimer, 1000);
+    timerStarted = true;
   }
-  return word;
-}
 
-function checkInput() {
   const typedText = textInput.value;
-  const currentWord = words[currentWordIndex];
-  const expectedText = getExpectedWord(currentWord, currentWordIndex);
+  const expectedText = getExpectedWord(words[currentWordIndex], currentWordIndex);
 
-  if (expectedText.startsWith(typedText)) {
-    textInput.style.color = "green";
+  if (e.inputType === 'deleteContentBackward') {
+    textInput.style.color = expectedText.startsWith(typedText) ? 'green' : 'red';
+    updateStats();
+    return;
+  }
+
+  typedCharacters++;
+
+  if (
+    expectedText.startsWith(typedText) ||
+    expectedText.toLowerCase().startsWith(typedText.toLowerCase())
+  ) {
+    textInput.style.color = 'green';
   } else {
-    textInput.style.color = "red";
+    textInput.style.color = 'red';
     mistakes++;
-    playSound("error");
   }
 
   updateStats();
 }
 
+function normalizeWordForCompare(text) {
+  if (!text) return '';
+  return text.replace(/\s+/g, '');
+}
+
 function handleKeyDown(e) {
-  if (e.key !== " " && e.key !== "Enter") return;
+  if (e.key !== ' ' && e.key !== 'Enter') return;
 
   e.preventDefault();
 
-  const typedText = textInput.value.trim();
-  const currentWord = words[currentWordIndex];
-  const expectedText = getExpectedWord(currentWord, currentWordIndex);
+  const rawTypedText = textInput.value;
+  const expectedText = getExpectedWord(words[currentWordIndex], currentWordIndex);
 
-  if (typedText === expectedText) {
+  const typedText = normalizeWordForCompare(rawTypedText);
+  const expectedNormalized = normalizeWordForCompare(expectedText);
+
+  if (typedText === expectedNormalized) {
     moveToNextWord();
   } else {
     markIncorrectInput(expectedText);
   }
 }
 
+
 function moveToNextWord() {
   currentWordIndex++;
-  textInput.value = '';
 
-  playSound('success');
+  textInput.value = '';
+  textInput.style.color = '';
+
+  playSuccessSound();
 
   if (currentWordIndex + visibleWordsCount >= words.length) {
     words.push(...generateWords(10));
     ensureSeparators(words.length + 10);
   }
 
-  // Reset punctuation for new word
-  currentPunctuation = '';
-
   updateTextDisplay();
   updateStats();
 }
 
-function checkInput(e) {
-  // Start timer on first input (except backspace)
-  if (!timerStarted && e.inputType !== 'deleteContentBackward') {
-    interval = setInterval(updateTimer, 1000);
-    timerStarted = true;
-  }
+function markIncorrectInput(expectedText) {
+  textInput.style.color = 'red';
 
-  const typedText = textInput.value; // Raw input without trim
-  const currentWord = words[currentWordIndex]; // Current word to match
-  const nextSeparator = separators[currentWordIndex] || ' ';
-  const prevSeparator = currentWordIndex > 0 ? separators[currentWordIndex - 1] : null;
-
-  // Handle backspace and input logic
-  if (e.inputType === 'deleteContentBackward') {
-    return; // Do not count backspace as a mistake or character typed
-  }
-
-  // Track all characters typed
-  typedCharacters++;
-
-  // Validate input
-  let expectedText = currentWord;
-  // Capitalize if the previous separator was punctuation (word should be capitalized)
-  if (prevSeparator === '\n') {
-    expectedText = currentWord.charAt(0).toUpperCase() + currentWord.slice(1);
-  }
-  if (nextSeparator === '\n') {
-    expectedText += currentPunctuation;
-  }
-
-  if (expectedText.startsWith(typedText)) {
-    textInput.style.color = "green";
-  } else {
-    textInput.style.color = "red";
+  if (textInput.value.trim() !== '') {
     mistakes++;
-    playSound('error');
   }
 
   updateStats();
@@ -304,9 +303,13 @@ function updateStats() {
   const wordsTyped = currentWordIndex;
   const elapsedTime = timerDuration - timeLeft;
   const minutes = elapsedTime / 60;
+
   const wpm = Math.round(wordsTyped / minutes || 0);
   const cpm = Math.round(typedCharacters / minutes || 0);
-  const accuracy = Math.max(0, Math.round(((typedCharacters - mistakes) / typedCharacters) * 100) || 0);
+  const accuracy = Math.max(
+    0,
+    Math.round(((typedCharacters - mistakes) / typedCharacters) * 100) || 0
+  );
 
   wpmDisplay.textContent = wpm;
   cpmDisplay.textContent = cpm;
@@ -317,115 +320,77 @@ function updateTimer() {
   timeLeft--;
   timerDisplay.textContent = timeLeft;
 
-  if (timeLeft === 0) {
+  if (timeLeft <= 0) {
     clearInterval(interval);
+    interval = null;
     textInput.disabled = true;
     showPopup();
   }
 }
 
 function showPopup() {
-  // Check if results popup should be shown
-  const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
-  if (settings.showResults === false) {
-    return; // Don't show popup if disabled
+  const currentSettings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
+  if (currentSettings.showResults === false) {
+    return;
   }
 
-  const wpm = parseInt(wpmDisplay.textContent);
-  const cpm = parseInt(cpmDisplay.textContent);
-  const accuracy = parseFloat(accuracyDisplay.textContent.replace('%', ''));
+  const wpm = parseInt(wpmDisplay.textContent, 10) || 0;
+  const cpm = parseInt(cpmDisplay.textContent, 10) || 0;
+  const accuracy = parseFloat(accuracyDisplay.textContent.replace('%', '')) || 0;
   const score = calculateScore(cpm, accuracy, difficulty);
 
   popupWpm.textContent = wpm;
-  popupCpm.textContent = cpm; 
+  popupCpm.textContent = cpm;
   popupAccuracy.textContent = accuracyDisplay.textContent;
   popupScore.textContent = score;
 
-  // Check if it's a new high score
   const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
   const previousScores = results.map(r => r.score || 0);
   const previousHighScore = previousScores.length > 0 ? Math.max(...previousScores) : 0;
   const isNewHighScore = score > previousHighScore;
-  
-  // Check if it's a perfect game (100% accuracy)
   const isPerfectGame = accuracy === 100;
-  
+
   const newHighscoreMsg = document.getElementById('new-highscore-msg');
   const perfectGameMsg = document.getElementById('perfect-game-msg');
-  
-  if (isNewHighScore) {
-    newHighscoreMsg.classList.remove('hidden');
-  } else {
-    newHighscoreMsg.classList.add('hidden');
+
+  if (newHighscoreMsg) {
+    newHighscoreMsg.classList.toggle('hidden', !isNewHighScore);
   }
-  
-  if (isPerfectGame) {
-    perfectGameMsg.classList.remove('hidden');
-  } else {
-    perfectGameMsg.classList.add('hidden');
+
+  if (perfectGameMsg) {
+    perfectGameMsg.classList.toggle('hidden', !isPerfectGame);
   }
 
   popup.classList.remove('hidden');
 
-  // Save results to localStorage
   const testResult = {
-    wpm: wpm,
-    cpm: cpm,
-    accuracy: accuracy,
-    score: score,
-    difficulty: difficulty,
+    wpm,
+    cpm,
+    accuracy,
+    score,
+    difficulty,
     timestamp: new Date().toISOString(),
-    timeTaken: 60 - timeLeft,
+    timeTaken: timerDuration - timeLeft,
     isHighScore: isNewHighScore,
     isPerfectGame: isPerfectGame
   };
+
   results.push(testResult);
-  // Keep only last 100 results
+
   if (results.length > 100) {
     results.shift();
   }
+
   localStorage.setItem('typingTestResults', JSON.stringify(results));
 }
 
 restartBtn.addEventListener('click', () => {
   timerStarted = false;
   if (interval) clearInterval(interval);
-  location.reload(); // Reload the page to restart the test
+  location.reload();
 });
 
 goHomeBtn.addEventListener('click', goHome);
-
-// Sound effects
-function playSound(type) {
-  if (!settings.soundEffects) return;
-
-  if (type === 'error' && !settings.errorSounds) return;
-
-  // Create audio context for simple beep sounds
-  try {
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    if (type === 'error') {
-      oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.2);
-    } else {
-      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    }
-
-    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
-  } catch (e) {
-    // Fallback: do nothing if Web Audio API is not supported
-  }
-}
 
 // Dark mode toggle
 const darkModeToggle = document.getElementById('dark-mode-toggle');
@@ -435,15 +400,19 @@ const body = document.body;
 const currentTheme = localStorage.getItem('theme') || 'light';
 if (currentTheme === 'dark') {
   body.classList.add('dark');
-  darkModeToggle.textContent = '☀️ Light Mode';
+  if (darkModeToggle) {
+    darkModeToggle.textContent = '☀️ Light Mode';
+  }
 }
 
-darkModeToggle.addEventListener('click', () => {
-  body.classList.toggle('dark');
-  const theme = body.classList.contains('dark') ? 'dark' : 'light';
-  localStorage.setItem('theme', theme);
-  darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-});
+if (darkModeToggle) {
+  darkModeToggle.addEventListener('click', () => {
+    body.classList.toggle('dark');
+    const theme = body.classList.contains('dark') ? 'dark' : 'light';
+    localStorage.setItem('theme', theme);
+    darkModeToggle.textContent = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+  });
+}
 
 // Start the test when the page loads and the difficulty is loaded
 loadWords();
