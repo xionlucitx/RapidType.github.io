@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="index_style.css" />
 </head>
 <body>
+
   <div class="page-shell">
     <div class="container">
       <h1>Welcome to RapidType</h1>
@@ -25,98 +26,177 @@
     </div>
   </div>
 
-  <div class="settings-modal hidden" id="settings-modal">
-    <div class="settings-content">
-      <h2>Settings</h2>
+<div class="settings-modal hidden" id="settings-modal">
+  <div class="settings-content">
+    <h2>Settings</h2>
 
-      <div class="settings-section">
-        <h3>Test Settings</h3>
-          <div class="setting-item">
-            <label>
-              <input type="radio" name="view-mode" value="paragraph" checked />
-              Paragraph view
-            </label>
+    <div class="settings-section">
+      <h3>Test Settings</h3>
+      <div class="setting-item">
+        <label>
+          <input type="radio" name="view-mode" value="paragraph" checked />
+          Paragraph view
+        </label>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="radio" name="view-mode" value="classic" />
+          Classic view
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3>Visuals</h3>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="dark-mode-toggle-setting" />
+          Dark mode
+        </label>
+      </div>
+      <div class="setting-item">
+        <label>
+          <input type="checkbox" id="show-results-toggle" />
+          Show results popup
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-buttons">
+      <button id="save-settings-btn" class="save-settings-btn">Save Settings</button>
+      <button id="close-settings-btn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-modal hidden" id="stats-modal">
+  <div class="stats-content">
+    <h2>Your Typing Stats</h2>
+
+    <div id="stats-summary">
+      <div class="summary-group">
+        <h3 class="summary-group-title">Averages</h3>
+        <div class="summary-grid summary-grid-averages">
+          <div class="summary-item">
+            <strong>Average Score</strong>
+            <span id="avg-score">0</span>
           </div>
-          <div class="setting-item">
-            <label>
-              <input type="radio" name="view-mode" value="classic" />
-              Classic view
-            </label>
+          <div class="summary-item">
+            <strong>Average CPM</strong>
+            <span id="avg-cpm">0</span>
           </div>
-      </div>
-
-      <div class="settings-section">
-        <h3>Visuals</h3>
-        <div class="setting-item">
-          <label>
-            <input type="checkbox" id="dark-mode-toggle-setting" />
-            Dark mode
-          </label>
-        </div>
-        <div class="setting-item">
-          <label>
-            <input type="checkbox" id="show-results-toggle" />
-            Show results popup
-          </label>
+          <div class="summary-item">
+            <strong>Average Accuracy</strong>
+            <span id="avg-accuracy">0%</span>
+          </div>
         </div>
       </div>
 
-      <div class="settings-buttons">
-        <button id="save-settings-btn" class="save-settings-btn">Save Settings</button>
-        <button id="close-settings-btn">Close</button>
+      <div class="summary-group">
+        <h3 class="summary-group-title">Score</h3>
+        <div class="summary-grid summary-grid-score">
+          <div class="summary-item summary-item-featured">
+            <strong>High Score</strong>
+            <span id="high-score">0</span>
+          </div>
+          <div class="summary-item">
+            <strong>Consistency</strong>
+            <span id="consistency">0%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-group summary-group-compact">
+        <h3 class="summary-group-title">Highlights</h3>
+        <div class="summary-grid summary-grid-highlights">
+          <div class="summary-item summary-item-small">
+            <strong>Peak WPM</strong>
+            <span id="peak-wpm">0</span>
+          </div>
+          <div class="summary-item summary-item-small">
+            <strong>Perfect Games</strong>
+            <span id="perfect-games">0</span>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="stats-modal hidden" id="stats-modal">
-    <div class="stats-content">
-      <h2>Your Typing Stats</h2>
-
-      <div id="stats-summary">
-        <div class="summary-item">
-          <strong>High Score:</strong> <span id="high-score">0</span>
-        </div>
-        <div class="summary-item">
-          <strong>Average Score:</strong> <span id="avg-score">0</span>
+    <div class="filters-panel">
+      <div class="filter-group">
+        <span class="filter-title">Difficulty</span>
+        <div class="difficulty-filter">
+          <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked /> Easy</label>
+          <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked /> Medium</label>
+          <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked /> Hard</label>
         </div>
       </div>
 
-      <div class="difficulty-filter">
-        <label><input type="checkbox" value="easy" class="difficulty-checkbox" checked /> Easy</label>
-        <label><input type="checkbox" value="medium" class="difficulty-checkbox" checked /> Medium</label>
-        <label><input type="checkbox" value="hard" class="difficulty-checkbox" checked /> Hard</label>
-        <label><input type="checkbox" id="perfect-game-checkbox" class="filter-checkbox" /> Perfect Games</label>
+      <div class="filter-group">
+        <label class="filter-title" for="date-range-filter">Date Range</label>
+        <select id="date-range-filter" class="filter-select">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="7days">Last 7 Days</option>
+          <option value="30days">Last 30 Days</option>
+          <option value="month">This Month</option>
+        </select>
       </div>
 
-      <div id="stats-list"></div>
+      <div class="filter-group">
+        <label class="filter-title" for="accuracy-filter">Accuracy</label>
+        <select id="accuracy-filter" class="filter-select">
+          <option value="all">All Accuracy</option>
+          <option value="100">100% Only</option>
+          <option value="95">95% and up</option>
+          <option value="90">90% and up</option>
+          <option value="below90">Below 90%</option>
+        </select>
+      </div>
 
-      <div class="stats-buttons">
-        <button id="delete-all-stats-btn" class="delete-all-btn">Delete All Stats</button>
-        <button id="close-stats-btn">Close</button>
+      <div class="filter-group">
+        <label class="filter-title" for="sort-filter">Sort By</label>
+        <select id="sort-filter" class="filter-select">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="score">Highest Score</option>
+          <option value="wpm">Highest WPM</option>
+          <option value="accuracy">Best Accuracy</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-title">Extras</span>
+        <div class="difficulty-filter">
+          <label><input type="checkbox" id="perfect-game-checkbox" class="filter-checkbox" /> Perfect Games</label>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="confirm-modal hidden" id="confirm-modal">
-    <div class="confirm-content">
-      <h3 id="confirm-title">Confirm Deletion</h3>
-      <p id="confirm-message">Type to confirm deletion:</p>
-      <input type="text" id="confirm-input" placeholder="Type here..." />
-      <div class="confirm-buttons">
-        <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
-        <button id="cancel-delete-btn" class="cancel-delete-btn">Cancel</button>
-      </div>
+    <div id="stats-list"></div>
+
+    <div class="stats-buttons">
+      <button id="delete-all-stats-btn" class="delete-all-btn">Delete All Stats</button>
+      <button id="close-stats-btn">Close</button>
     </div>
   </div>
+</div>
 
-  <div class="footer" id="footertext">
-    <p class="rainbow rainbow_text_animated">Made by Rares Racsan</p>
-    <p class="rainbow rainbow_text_animated">Fork by Xionlucitx</p>
+<div class="confirm-modal hidden" id="confirm-modal">
+  <div class="confirm-content">
+    <h3 id="confirm-title">Confirm Deletion</h3>
+    <p id="confirm-message">Type to confirm deletion:</p>
+    <input type="text" id="confirm-input" placeholder="Type here..." />
+    <div class="confirm-buttons">
+      <button id="confirm-delete-btn" class="confirm-delete-btn">Delete</button>
+      <button id="cancel-delete-btn" class="cancel-delete-btn">Cancel</button>
+    </div>
   </div>
+</div>
 
-
-
-
+<div class="footer" id="footertext">
+  <p class="rainbow rainbow_text_animated">Made by Rares Racsan</p>
+  <p class="rainbow rainbow_text_animated">Fork by Xionlucitx</p>
+</div>
   <script>
     function startGame(level) {
       window.location.href = `test.html?difficulty=${level}`;
@@ -130,6 +210,14 @@
     const deleteAllStatsBtn = document.getElementById('delete-all-stats-btn');
     const highScoreSpan = document.getElementById('high-score');
     const avgScoreSpan = document.getElementById('avg-score');
+    const avgCpmSpan = document.getElementById('avg-cpm');
+    const avgAccuracySpan = document.getElementById('avg-accuracy');
+    const peakWpmSpan = document.getElementById('peak-wpm');
+    const consistencySpan = document.getElementById('consistency');
+    const perfectGamesSpan = document.getElementById('perfect-games');
+    const dateRangeFilter = document.getElementById('date-range-filter');
+    const accuracyFilter = document.getElementById('accuracy-filter');
+    const sortFilter = document.getElementById('sort-filter');
     const difficultyCheckboxes = document.querySelectorAll('.difficulty-checkbox');
     const perfectGameCheckbox = document.getElementById('perfect-game-checkbox');
     const confirmModal = document.getElementById('confirm-modal');
@@ -149,54 +237,153 @@
         .filter(cb => cb.checked)
         .map(cb => cb.value);
     }
+function isInDateRange(result, range) {
+  if (range === 'all') return true;
 
-    function updateStatsDisplay() {
-      const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
-      const selectedDifficulties = getSelectedDifficulties();
-      const showPerfectOnly = perfectGameCheckbox.checked;
+  const resultDate = new Date(result.timestamp);
+  const now = new Date();
 
-      let filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
+  if (range === 'today') {
+    return resultDate.toDateString() === now.toDateString();
+  }
 
-      if (showPerfectOnly) {
-        filteredResults = filteredResults.filter(r => r.isPerfectGame === true);
-      }
+  if (range === '7days') {
+    const cutoff = new Date();
+    cutoff.setDate(now.getDate() - 7);
+    return resultDate >= cutoff;
+  }
 
-      if (results.length === 0) {
-        statsList.innerHTML = '<p>No test results yet.</p>';
-        highScoreSpan.textContent = '0';
-        avgScoreSpan.textContent = '0';
-      } else if (filteredResults.length === 0) {
-        statsList.innerHTML = '<p>No results for selected filters.</p>';
-        highScoreSpan.textContent = '0';
-        avgScoreSpan.textContent = '0';
-      } else {
-        const scores = filteredResults.map(r => r.score || 0);
-        const highScore = Math.max(...scores);
-        const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  if (range === '30days') {
+    const cutoff = new Date();
+    cutoff.setDate(now.getDate() - 30);
+    return resultDate >= cutoff;
+  }
 
-        highScoreSpan.textContent = highScore;
-        avgScoreSpan.textContent = avgScore;
+  if (range === 'month') {
+    return (
+      resultDate.getMonth() === now.getMonth() &&
+      resultDate.getFullYear() === now.getFullYear()
+    );
+  }
 
-        statsList.innerHTML = filteredResults.map((result) => {
-          const originalIndex = results.indexOf(result);
-          const dateOnly = new Date(result.timestamp).toLocaleDateString();
-          const isHighScore = result.score === highScore;
-          const starIcon = isHighScore ? ' ⭐' : '';
-          const isPerfect = result.isPerfectGame ? ' class="perfect-accuracy"' : '';
+  return true;
+}
 
-          return `
-            <div class="stat-item">
-              <div class="stat-info">
-                <strong>${result.difficulty.toUpperCase()}</strong> - ${dateOnly}<br>
-                WPM: ${result.wpm} | CPM: ${result.cpm} | Accuracy: <span${isPerfect}>${result.accuracy}%</span> | Score: ${result.score || 'N/A'}${starIcon}
-              </div>
-              <button class="delete-stat-btn" onclick="deleteStatResult(${originalIndex})">Delete</button>
-            </div>
-          `;
-        }).join('');
-      }
-    }
+function matchesAccuracyFilter(result, filterValue) {
+  const accuracy = result.accuracy || 0;
 
+  if (filterValue === 'all') return true;
+  if (filterValue === '100') return accuracy === 100;
+  if (filterValue === '95') return accuracy >= 95;
+  if (filterValue === '90') return accuracy >= 90;
+  if (filterValue === 'below90') return accuracy < 90;
+
+  return true;
+}
+
+function sortResults(results, sortValue) {
+  const sorted = [...results];
+
+  if (sortValue === 'oldest') {
+    sorted.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  } else if (sortValue === 'score') {
+    sorted.sort((a, b) => (b.score || 0) - (a.score || 0));
+  } else if (sortValue === 'wpm') {
+    sorted.sort((a, b) => (b.wpm || 0) - (a.wpm || 0));
+  } else if (sortValue === 'accuracy') {
+    sorted.sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
+  } else {
+    sorted.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  }
+
+  return sorted;
+}
+
+function updateStatsDisplay() {
+  const results = JSON.parse(localStorage.getItem('typingTestResults') || '[]');
+  const selectedDifficulties = getSelectedDifficulties();
+  const showPerfectOnly = perfectGameCheckbox.checked;
+  const selectedDateRange = dateRangeFilter.value;
+  const selectedAccuracy = accuracyFilter.value;
+  const selectedSort = sortFilter.value;
+
+  let filteredResults = results.filter(r => selectedDifficulties.includes(r.difficulty));
+
+  if (showPerfectOnly) {
+    filteredResults = filteredResults.filter(r => r.isPerfectGame === true);
+  }
+
+  filteredResults = filteredResults.filter(r => isInDateRange(r, selectedDateRange));
+  filteredResults = filteredResults.filter(r => matchesAccuracyFilter(r, selectedAccuracy));
+  filteredResults = sortResults(filteredResults, selectedSort);
+
+  if (results.length === 0) {
+    statsList.innerHTML = '<p>No test results yet.</p>';
+    highScoreSpan.textContent = '0';
+    avgScoreSpan.textContent = '0';
+    avgCpmSpan.textContent = '0';
+    avgAccuracySpan.textContent = '0%';
+    peakWpmSpan.textContent = '0';
+    consistencySpan.textContent = '0%';
+    perfectGamesSpan.textContent = '0';
+  } else if (filteredResults.length === 0) {
+    statsList.innerHTML = '<p>No results for selected filters.</p>';
+    highScoreSpan.textContent = '0';
+    avgScoreSpan.textContent = '0';
+    avgCpmSpan.textContent = '0';
+    avgAccuracySpan.textContent = '0%';
+    peakWpmSpan.textContent = '0';
+    consistencySpan.textContent = '0%';
+    perfectGamesSpan.textContent = '0';
+  } else {
+    const scores = filteredResults.map(r => r.score || 0);
+    const cpms = filteredResults.map(r => r.cpm || 0);
+    const accuracies = filteredResults.map(r => r.accuracy || 0);
+    const wpms = filteredResults.map(r => r.wpm || 0);
+
+    const highScore = Math.max(...scores);
+    const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+    const avgCpm = Math.round(cpms.reduce((a, b) => a + b, 0) / cpms.length);
+    const avgAccuracy = Math.round(
+      accuracies.reduce((a, b) => a + b, 0) / accuracies.length
+    );
+
+    const peakWpm = Math.max(...wpms);
+    const perfectGames = filteredResults.filter(r => r.isPerfectGame).length;
+
+    const avgWpm = wpms.reduce((a, b) => a + b, 0) / wpms.length;
+    const variance = wpms.reduce((sum, wpm) => {
+      return sum + Math.pow(wpm - avgWpm, 2);
+    }, 0) / wpms.length;
+    const consistency = Math.max(0, Math.round(100 - Math.sqrt(variance)));
+
+    highScoreSpan.textContent = highScore;
+    avgScoreSpan.textContent = avgScore;
+    avgCpmSpan.textContent = avgCpm;
+    avgAccuracySpan.textContent = `${avgAccuracy}%`;
+    peakWpmSpan.textContent = peakWpm;
+    consistencySpan.textContent = `${consistency}%`;
+    perfectGamesSpan.textContent = perfectGames;
+
+    statsList.innerHTML = filteredResults.map((result) => {
+      const originalIndex = results.indexOf(result);
+      const dateOnly = new Date(result.timestamp).toLocaleDateString();
+      const isHighScore = result.score === highScore;
+      const starIcon = isHighScore ? ' ⭐' : '';
+      const isPerfect = result.isPerfectGame ? ' class="perfect-accuracy"' : '';
+
+      return `
+        <div class="stat-item">
+          <div class="stat-info">
+            <strong>${result.difficulty.toUpperCase()}</strong> - ${dateOnly}<br>
+            WPM: ${result.wpm} | CPM: ${result.cpm} | Accuracy: <span${isPerfect}>${result.accuracy}%</span> | Score: ${result.score || 'N/A'}${starIcon}
+          </div>
+          <button class="delete-stat-btn" onclick="deleteStatResult(${originalIndex})">Delete</button>
+        </div>
+      `;
+    }).join('');
+  }
+}
     window.deleteStatResult = function(index) {
       pendingDeleteAction = 'single';
       pendingDeleteIndex = index;
@@ -218,6 +405,9 @@
     });
 
     perfectGameCheckbox.addEventListener('change', updateStatsDisplay);
+    dateRangeFilter.addEventListener('change', updateStatsDisplay);
+    accuracyFilter.addEventListener('change', updateStatsDisplay);
+    sortFilter.addEventListener('change', updateStatsDisplay);
 
     deleteAllStatsBtn.addEventListener('click', () => {
       pendingDeleteAction = 'all';

@@ -62,9 +62,9 @@ function playSuccessSound() {
 // Calculate score based on WPM, CPM, accuracy, and difficulty
 function calculateScore(wpm, cpm, accuracy, mode) {
   const targets = {
-    easy:   { wpm: 55, cpm: 280 },
-    medium: { wpm: 40, cpm: 260 },
-    hard:   { wpm: 18, cpm: 210 }
+    easy:   { wpm: 55, cpm: 220 },
+    medium: { wpm: 36 , cpm: 240 },
+    hard:   { wpm: 20, cpm: 230 }
   };
 
   const difficultyMultiplier = {
