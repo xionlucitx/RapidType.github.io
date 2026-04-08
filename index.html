@@ -31,18 +31,18 @@
 
       <div class="settings-section">
         <h3>Test Settings</h3>
-        <div class="setting-item">
-          <label>
-            <input type="radio" name="view-mode" value="vertical" checked />
-            Vertical view
-          </label>
-        </div>
-        <div class="setting-item">
-          <label>
-            <input type="radio" name="view-mode" value="horizontal" />
-            Horizontal view
-          </label>
-        </div>
+          <div class="setting-item">
+            <label>
+              <input type="radio" name="view-mode" value="paragraph" checked />
+              Paragraph view
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="radio" name="view-mode" value="classic" />
+              Classic view
+            </label>
+          </div>
       </div>
 
       <div class="settings-section">
@@ -113,6 +113,9 @@
     <p class="rainbow rainbow_text_animated">Made by Rares Racsan</p>
     <p class="rainbow rainbow_text_animated">Fork by Xionlucitx</p>
   </div>
+
+
+
 
   <script>
     function startGame(level) {
@@ -282,9 +285,14 @@
     const viewModeRadios = document.querySelectorAll('input[name="view-mode"]');
     const body = document.body;
 
-    function loadSettings() {
-      const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
-      const viewMode = settings.viewMode || 'vertical';
+   function loadSettings() {
+    const settings = JSON.parse(localStorage.getItem('typingTestSettings') || '{}');
+
+     let viewMode = settings.viewMode || 'paragraph';
+
+      if (viewMode === 'vertical') viewMode = 'paragraph';
+      if (viewMode === 'horizontal') viewMode = 'classic';
+
       const darkMode = settings.darkMode || false;
       const showResults = settings.showResults !== false;
 
@@ -295,8 +303,11 @@
       darkModeToggleSetting.checked = darkMode;
       showResultsToggle.checked = showResults;
 
-      applySettings(settings);
-    }
+      applySettings({
+        ...settings,
+        viewMode
+      });
+}
 
     function saveSettings() {
       const viewMode = document.querySelector('input[name="view-mode"]:checked').value;
@@ -311,17 +322,21 @@
 
       localStorage.setItem('typingTestSettings', JSON.stringify(settings));
       applySettings(settings);
-    }
+}
+      function applySettings(settings) {
+        if (settings.darkMode) {
+          body.classList.add('dark');
+        } else {
+          body.classList.remove('dark');
+        }
 
-    function applySettings(settings) {
-      if (settings.darkMode) {
-        body.classList.add('dark');
-      } else {
-        body.classList.remove('dark');
+        let viewMode = settings.viewMode || 'paragraph';
+
+        if (viewMode === 'vertical') viewMode = 'paragraph';
+        if (viewMode === 'horizontal') viewMode = 'classic';
+
+        localStorage.setItem('viewMode', viewMode);
       }
-
-      localStorage.setItem('viewMode', settings.viewMode || 'vertical');
-    }
 
     settingsBtn.addEventListener('click', () => {
       loadSettings();

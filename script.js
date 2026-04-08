@@ -150,8 +150,8 @@ function getExpectedWord(word, index) {
 }
 
 function getWordsToShow() {
-  const viewMode = localStorage.getItem('viewMode') || 'vertical';
-  return viewMode === 'vertical' ? 22 : visibleWordsCount;
+  const viewMode = localStorage.getItem('viewMode') || 'paragraph';
+  return viewMode === 'paragraph' ? 24 : visibleWordsCount;
 }
 
 function updateInputHint() {
@@ -163,36 +163,173 @@ function updateInputHint() {
 }
 
 function updateTextDisplay() {
-  const viewMode = localStorage.getItem('viewMode') || 'vertical';
-  const wordsToShow = getWordsToShow();
+  const viewMode = localStorage.getItem('viewMode') || 'paragraph';
 
-  let visibleWords = words.slice(currentWordIndex, currentWordIndex + wordsToShow);
+  if (viewMode === 'classic') {
+    renderClassicView();
+  } else {
+    renderParagraphView();
+  }
+}
 
-  if (visibleWords.length < wordsToShow) {
-    words.push(...generateWords(wordsToShow - visibleWords.length));
-    visibleWords = words.slice(currentWordIndex, currentWordIndex + wordsToShow);
+function buildParagraphSentenceData(startIndex, maxWords = 120) {
+  const sentences = [];
+  let index = startIndex;
+  let wordsRead = 0;
+
+  while (wordsRead < maxWords) {
+    if (index >= words.length - 20) {
+      words.push(...generateWords(30));
+    }
+
+    ensureSeparators(index + 30);
+
+    const sentence = [];
+
+    while (wordsRead < maxWords) {
+      const wordIndex = index;
+      sentence.push(wordIndex);
+
+      index++;
+      wordsRead++;
+
+      if (separators[wordIndex] === '\n') {
+        break;
+      }
+
+      if (index >= words.length - 5) {
+        words.push(...generateWords(20));
+      }
+
+      ensureSeparators(index + 10);
+    }
+
+    if (sentence.length > 0) {
+      sentences.push(sentence);
+    }
+
+    if (sentence.length === 0) {
+      break;
+    }
   }
 
-  ensureSeparators(currentWordIndex + wordsToShow);
+  return sentences;
+}
 
+function renderClassicView() {
+  const wordsToShow = getWordsToShow();
+
+  const startIndex = currentWordIndex;
+  const endIndex = startIndex + wordsToShow;
+
+  if (endIndex > words.length) {
+    words.push(...generateWords(endIndex - words.length + 10));
+  }
+
+  ensureSeparators(endIndex + 1);
+
+  const visibleWords = words.slice(startIndex, endIndex);
   let displayHtml = '';
 
   visibleWords.forEach((word, index) => {
-    const wordIndex = currentWordIndex + index;
+    const wordIndex = startIndex + index;
     const expectedWord = getExpectedWord(word, wordIndex);
-    const isCurrent = index === 0 ? ' current-word' : '';
 
-    displayHtml += `<span class="word${isCurrent}">${escapeHtml(expectedWord)}</span>`;
+    let className = 'word';
+    if (wordIndex < currentWordIndex) {
+      className += ' completed-word';
+    } else if (wordIndex === currentWordIndex) {
+      className += ' current-word';
+    } else {
+      className += ' upcoming-word';
+    }
+
+    const separator = separators[wordIndex];
+    let separatorHtml = '';
 
     if (index < visibleWords.length - 1) {
-      const separator = separators[wordIndex];
-      displayHtml += separator === '\n'
+      separatorHtml =
+      separator === '\n'
         ? `<span class="enter-separator"> ↵ </span>`
         : `<span class="space"> </span>`;
     }
+
+    if (wordIndex === currentWordIndex) {
+      displayHtml += `<span class="${className}">${escapeHtml(expectedWord)}${separatorHtml}</span>`;
+    } else {
+      displayHtml += `<span class="${className}">${escapeHtml(expectedWord)}</span>`;
+      if (index < visibleWords.length - 1) {
+        displayHtml += separatorHtml;
+      }
+    }
   });
 
+  textDisplay.classList.remove('paragraph-view');
+  textDisplay.classList.add('classic-view');
   textDisplay.innerHTML = displayHtml;
+}
+
+function renderParagraphView() {
+  textDisplay.classList.remove('classic-view');
+  textDisplay.classList.add('paragraph-view');
+  textDisplay.innerHTML = '';
+
+  const sentenceData = buildParagraphSentenceData(currentWordIndex, 140);
+
+  for (const sentence of sentenceData) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'sentence-block';
+
+    sentence.forEach((wordIndex) => {
+      const expectedWord = getExpectedWord(words[wordIndex], wordIndex);
+
+      let className = 'word';
+      if (wordIndex < currentWordIndex) {
+        className += ' completed-word';
+      } else if (wordIndex === currentWordIndex) {
+        className += ' current-word';
+      } else {
+        className += ' upcoming-word';
+      }
+
+      const wordSpan = document.createElement('span');
+      wordSpan.className = className;
+      wordSpan.innerHTML = escapeHtml(expectedWord);
+
+      const separator = separators[wordIndex];
+      const showEnterIcon = separator === '\n';
+      const showSpace = separator === ' ';
+
+      if (wordIndex === currentWordIndex && (showEnterIcon || showSpace)) {
+        const separatorSpan = document.createElement('span');
+        separatorSpan.className = showEnterIcon ? 'enter-separator' : 'space';
+        separatorSpan.innerHTML = showEnterIcon ? ' ↵ ' : ' ';
+        wordSpan.appendChild(separatorSpan);
+        wrapper.appendChild(wordSpan);
+      } else {
+        wrapper.appendChild(wordSpan);
+
+        if (showSpace) {
+          const separatorSpan = document.createElement('span');
+          separatorSpan.className = 'space';
+          separatorSpan.innerHTML = ' ';
+          wrapper.appendChild(separatorSpan);
+        } else if (showEnterIcon) {
+          const separatorSpan = document.createElement('span');
+          separatorSpan.className = 'enter-separator';
+          separatorSpan.innerHTML = ' ↵ ';
+          wrapper.appendChild(separatorSpan);
+        }
+      }
+    });
+
+    textDisplay.appendChild(wrapper);
+
+    if (textDisplay.scrollHeight > textDisplay.clientHeight) {
+      textDisplay.removeChild(wrapper);
+      break;
+    }
+  }
 }
 
 function startTest() {
@@ -307,7 +444,6 @@ function moveToNextWord() {
 
   textInput.value = '';
   textInput.style.color = '';
-
 
   const wordsToShow = getWordsToShow();
 
