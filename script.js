@@ -59,17 +59,32 @@ function playSuccessSound() {
   }
 }
 
-// Calculate score based on CPM, accuracy, and difficulty
-function calculateScore(cpm, accuracy, mode) {
-  const modeTargets = {
-    easy: { cpm: 380, accuracy: 95 },
-    medium: { cpm: 325, accuracy: 95 },
-    hard: { cpm: 270, accuracy: 95 },
+// Calculate score based on WPM, CPM, accuracy, and difficulty
+function calculateScore(wpm, cpm, accuracy, mode) {
+  const targets = {
+    easy:   { wpm: 55, cpm: 280 },
+    medium: { wpm: 40, cpm: 260 },
+    hard:   { wpm: 18, cpm: 210 }
   };
 
-  const { cpm: targetCpm, accuracy: targetAccuracy } = modeTargets[mode] || modeTargets.easy;
-  const rawScore = 100 * (cpm / targetCpm) * (accuracy / targetAccuracy);
-  return Math.max(0, Math.min(150, Math.round(rawScore)));
+  const difficultyMultiplier = {
+    easy: 1.0,
+    medium: 1.15,
+    hard: 1.25
+  };
+
+  const target = targets[mode] || targets.easy;
+  const targetWpm = target.wpm;
+  const targetCpm = target.cpm;
+
+  const baseScore =
+    (wpm / targetWpm) * 70 +
+    (cpm / targetCpm) * 30;
+
+  const finalScore =
+    baseScore * difficultyMultiplier[mode] * (accuracy / 100);
+
+  return Math.max(0, Math.min(150, Math.round(finalScore)));
 }
 
 // Load words from the selected difficulty
@@ -510,7 +525,7 @@ function showPopup() {
   const wpm = parseInt(wpmDisplay.textContent, 10) || 0;
   const cpm = parseInt(cpmDisplay.textContent, 10) || 0;
   const accuracy = parseFloat(accuracyDisplay.textContent.replace('%', '')) || 0;
-  const score = calculateScore(cpm, accuracy, difficulty);
+  const score = calculateScore(wpm, cpm, accuracy, difficulty);
 
   popupWpm.textContent = wpm;
   popupCpm.textContent = cpm;
